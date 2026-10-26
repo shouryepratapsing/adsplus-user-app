@@ -1,0 +1,137 @@
+/* Ads+ Dark Mode — added as an update-only stylesheet. */
+.theme-toggle { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:35px; padding:0 9px; border:1px solid var(--border); border-radius:11px; color:var(--ink); background:var(--surface); box-shadow:0 2px 8px rgba(35,25,15,.035); font-size:10px; font-weight:800; white-space:nowrap; transition:background .18s ease,border-color .18s ease,color .18s ease; }
+.theme-toggle:hover { border-color:rgba(111,78,55,.38); }
+.theme-toggle-icon { display:grid; place-items:center; color:var(--brown); }
+.theme-switch-track { display:flex; align-items:center; justify-content:flex-start; width:31px; height:18px; padding:2px; border-radius:999px; background:#d7d1ca; transition:background .18s ease; }
+.theme-switch-thumb { display:block; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.17); transition:transform .18s ease; }
+.theme-toggle[aria-checked="true"] .theme-switch-track { background:#6f4e37; }
+.theme-toggle[aria-checked="true"] .theme-switch-thumb { transform:translateX(13px); }
+.theme-toggle:focus-visible { outline:3px solid rgba(111,78,55,.32); outline-offset:2px; }
+
+/* Transparent logo container: no brown tile behind the logo. */
+.brand-mark.adsplus-brand-mark { width:48px; height:48px; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
+.adsplus-brand-mark .adsplus-logo-image { display:block; width:100%; height:100%; object-fit:contain; padding:0; }
+.adsplus-brand-mark .adsplus-logo-dark { display:none; }
+.adsplus-brand-mark .brand-logo-fallback { display:none; position:relative; inset:auto; color:#222; font-size:22px; letter-spacing:-1px; }
+.adsplus-brand-mark .brand-logo-fallback > span { top:-5px; right:-9px; color:#222; }
+.adsplus-brand-mark.logo-missing .adsplus-logo-light, .adsplus-brand-mark.logo-missing .adsplus-logo-dark { display:none; }
+.adsplus-brand-mark.logo-missing .brand-logo-fallback { display:block; }
+.theme-dark .adsplus-brand-mark .adsplus-logo-light { display:none; }
+.theme-dark .adsplus-brand-mark .adsplus-logo-dark { display:block; }
+.theme-dark .adsplus-brand-mark.logo-missing .brand-logo-fallback { color:#fff; }
+.theme-dark .adsplus-brand-mark.logo-missing .brand-logo-fallback > span { color:#fff; }
+
+/* App-wide dark theme. Warm accent cards are intentionally retained. */
+.app-shell.theme-dark { --ink:#f2eee8; --muted:#b4ada4; --faint:#898178; --border:rgba(233,223,211,.14); --surface:#1c1b1a; --brown-soft:#30251e; --lavender:#37303f; --lavender-ink:#d6c6eb; --green-soft:#1c2d20; --shadow:0 12px 35px rgba(0,0,0,.18); color:var(--ink); background:#111110; color-scheme:dark; }
+.theme-dark .sidebar { background:#171615; border-color:var(--border); }
+.theme-dark .brand-copy small, .theme-dark .sidebar-caption { color:#9d9489; }
+.theme-dark .brand-copy strong, .theme-dark .side-user-copy strong { color:#f3eee8; }
+.theme-dark .nav-item { color:#b4aba1; }
+.theme-dark .nav-item:hover { color:#f1d9c6; background:#26211d; }
+.theme-dark .nav-item.selected { color:#f1d5bf; background:#33271f; }
+.theme-dark .nav-dot { background:#d8b59b; }
+.theme-dark .sidebar-help { border-color:#38302a; background:linear-gradient(145deg,#24201c,#1b1917); }
+.theme-dark .help-orb { color:#f0d7c2; background:#3b2e24; }
+.theme-dark .icon-quiet { color:#d0c6bb; }
+.theme-dark .icon-quiet:hover { border-color:var(--border); background:#282624; }
+.theme-dark .main-column { background:#111110; }
+.theme-dark .topbar { border-color:var(--border); background:rgba(19,18,17,.91); }
+.theme-dark .breadcrumb { color:#a59c91; }
+.theme-dark .breadcrumb strong { color:#f0eae3; }
+.theme-dark .notification-btn i { border-color:#151413; }
+.theme-dark .top-avatar { border-color:#54475e; background:#352c40; color:#eee2fc; }
+.theme-dark .page-content { color:var(--ink); }
+.theme-dark .page-heading h1, .theme-dark .section-title-row h2, .theme-dark .section-header h2, .theme-dark .payment-explainer h2, .theme-dark .account-safety h2, .theme-dark .section-card h2, .theme-dark .section-card h3, .theme-dark .summary-value, .theme-dark .daily-stat strong { color:#f2eee8; }
+.theme-dark .page-heading p, .theme-dark .muted-copy, .theme-dark .section-card p, .theme-dark .summary-card p, .theme-dark .profile-main-copy p { color:#aaa198; }
+.theme-dark .eyebrow, .theme-dark .section-kicker { color:#c3a78e; }
+.theme-dark .card-surface, .theme-dark .section-card, .theme-dark .summary-card, .theme-dark .mode-card { border-color:var(--border); background:var(--surface); box-shadow:var(--shadow); }
+.theme-dark .side-user { border-color:var(--border); }
+.theme-dark .avatar { background:#342b3e; color:#e3d6f3; }
+.theme-dark .text-link, .theme-dark .subtle-link { color:#d8b69a; }
+.theme-dark .demo-pill { border-color:#43362d; color:#e4c9b3; background:#2b241f; }
+.theme-dark .range-pill { border-color:var(--border); color:#cec3b8; background:#252321; }
+.theme-dark .section-card, .theme-dark .summary-card, .theme-dark .daily-card, .theme-dark .two-column-section > *, .theme-dark .profile-card, .theme-dark .payment-explainer, .theme-dark .account-safety, .theme-dark .support-info-grid { color:var(--ink); }
+.theme-dark .activity-icon, .theme-dark .summary-icon, .theme-dark .small-icon, .theme-dark .explainer-icon, .theme-dark .profile-avatar-large, .theme-dark .profile-meta-icon { background:#342a23; color:#e2c3a8; }
+.theme-dark .connection-row, .theme-dark .rule-row, .theme-dark .ledger-row, .theme-dark .ledger-header, .theme-dark .page-footer { border-color:var(--border); }
+.theme-dark .connection-row strong, .theme-dark .ledger-activity strong, .theme-dark .rule-row strong, .theme-dark .section-card strong { color:#eee9e2; }
+.theme-dark .connection-row p, .theme-dark .ledger-activity small, .theme-dark .rule-row p, .theme-dark .field-helper, .theme-dark .support-info-grid p { color:#aaa197; }
+.theme-dark input, .theme-dark textarea, .theme-dark select { border-color:#48413a; color:#f2eee8; background:#201f1d; }
+.theme-dark input::placeholder, .theme-dark textarea::placeholder { color:#898178; }
+.theme-dark input:focus, .theme-dark textarea:focus, .theme-dark select:focus { border-color:#a38368; outline-color:rgba(195,158,128,.4); }
+.theme-dark .icon-button, .theme-dark .secondary-button, .theme-dark .sample-code, .theme-dark .coupon-form input, .theme-dark .amount-input-wrap { border-color:var(--border); color:#e8dfd6; background:#242220; }
+.theme-dark .primary-button { color:#fffaf5; background:#6f4e37; }
+.theme-dark .secondary-button:hover, .theme-dark .icon-button:hover { background:#302b26; }
+.theme-dark .notice-strip, .theme-dark .warning-callout, .theme-dark .coupon-demo-note { border-color:#514031; color:#e3c8af; background:#2a221b; }
+.theme-dark .empty-state { border-color:#48413a; background:#1c1b1a; color:#b4aba1; }
+.theme-dark .empty-state strong { color:#f2eee8; }
+.theme-dark .activity-icon, .theme-dark .kicker-icon, .theme-dark .benefit-icon { border-color:var(--border); }
+.theme-dark .mini-chart { border-color:var(--border); }
+.theme-dark .bar { background:#554236; }
+.theme-dark .bar:nth-child(3n) { background:#7b604a; }
+.theme-dark .positive-chip, .theme-dark .connection-active, .theme-dark .benefit-tag { color:#bfe0b8; background:#243327; }
+.theme-dark .status-tag { color:#d8cfc4; background:#312c26; }
+.theme-dark .profile-grid .section-card, .theme-dark .profile-hero { border-color:var(--border); background:#1c1b1a; }
+.theme-dark .profile-hero h2, .theme-dark .profile-hero strong, .theme-dark .profile-main-copy h2 { color:#f2eee8; }
+.theme-dark .profile-hero p, .theme-dark .profile-meta-row span { color:#a9a096; }
+.theme-dark .code-rules, .theme-dark .coupon-benefits .section-card { background:#1c1b1a; }
+.theme-dark .page-footer { color:#958c81; }
+.theme-dark .page-footer button { color:#d5b59a; }
+.theme-dark .mobile-tabbar { border-color:rgba(233,223,211,.16); background:rgba(27,26,25,.95); box-shadow:0 8px 28px rgba(0,0,0,.38); }
+.theme-dark .mobile-tabbar button { color:#aaa198; }
+.theme-dark .mobile-tabbar button.current { color:#e8cbb3; background:#362a22; }
+.theme-dark .toast { color:#f4eee7; background:#302923; }
+.theme-dark .coupon-hero { border-color:#45352a; }
+.theme-dark .wallet-main-card { border-color:#45352a; }
+.theme-dark .ads-auth-page { background:#111110; color:#f2eee8; }
+
+/* The login gate reads the saved mode before the app shell mounts. */
+html[data-adsplus-theme="dark"] .ads-auth-page { background:radial-gradient(ellipse at 50% 0%,rgba(86,64,48,.23),transparent 38%),#111110; color:#f2eee8; }
+html[data-adsplus-theme="dark"] .ads-auth-brand strong, html[data-adsplus-theme="dark"] .ads-auth-card h1 { color:#f2eee8; }
+html[data-adsplus-theme="dark"] .ads-auth-brand small, html[data-adsplus-theme="dark"] .ads-auth-subtitle { color:#b4aaa0; }
+html[data-adsplus-theme="dark"] .ads-auth-card { border-color:rgba(233,223,211,.14); background:#1c1b1a; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+html[data-adsplus-theme="dark"] .ads-auth-tabs { background:#282523; }
+html[data-adsplus-theme="dark"] .ads-auth-tabs button { color:#bbb0a4; }
+html[data-adsplus-theme="dark"] .ads-auth-tabs button.active { border-color:#55463a; background:#39312b; color:#efcfb5; }
+html[data-adsplus-theme="dark"] .ads-auth-methods button { border-color:#494039; background:#22201e; color:#d0c6bc; }
+html[data-adsplus-theme="dark"] .ads-auth-methods button.selected { border-color:#a27b5e; background:#34271e; color:#edd1b9; }
+html[data-adsplus-theme="dark"] .ads-auth-form label { color:#e2d9d0; }
+html[data-adsplus-theme="dark"] .ads-auth-input { border-color:#494039; background:#201f1d; color:#cbbdaf; }
+html[data-adsplus-theme="dark"] .ads-auth-input input { color:#f2eee8; }
+html[data-adsplus-theme="dark"] .ads-auth-input input::placeholder { color:#898178; }
+html[data-adsplus-theme="dark"] .ads-auth-forgot { color:#dfb99a; }
+html[data-adsplus-theme="dark"] .ads-auth-logo-light { display:none !important; }
+html[data-adsplus-theme="dark"] .ads-auth-logo-dark { display:block !important; }
+html[data-adsplus-theme="dark"] .ads-auth-mark { border:0; background:transparent; box-shadow:none; }
+html[data-adsplus-theme="light"] .ads-auth-logo-dark, html:not([data-adsplus-theme="dark"]) .ads-auth-logo-dark { display:none !important; }
+html[data-adsplus-theme="light"] .ads-auth-logo-light, html:not([data-adsplus-theme="dark"]) .ads-auth-logo-light { display:block !important; }
+
+@media (max-width:640px) {
+  .theme-toggle { min-height:32px; gap:5px; padding:0 6px; border-radius:10px; }
+  .theme-toggle-label { display:none; }
+  .theme-switch-track { width:29px; height:17px; }
+  .theme-switch-thumb { width:13px; height:13px; }
+  .theme-toggle[aria-checked="true"] .theme-switch-thumb { transform:translateX(12px); }
+  .brand-mark.adsplus-brand-mark { width:44px; height:44px; }
+}
+@media (prefers-reduced-motion:reduce) { .theme-toggle, .theme-switch-thumb, .theme-switch-track { transition:none; } }
+html[data-adsplus-theme="dark"] .ads-auth-google, html[data-adsplus-theme="dark"] .ads-auth-guest { border-color:#494039; background:#242220; color:#f0e9e1; }
+html[data-adsplus-theme="dark"] .ads-auth-or { color:#a79b8f; }
+html[data-adsplus-theme="dark"] .ads-auth-or span, html[data-adsplus-theme="dark"] .ads-auth-divider { background:#3a342e; }
+html[data-adsplus-theme="dark"] .ads-auth-message, html[data-adsplus-theme="dark"] .ads-auth-warning { border-color:#514031; background:#2a221b; color:#e3c8af; }
+html[data-adsplus-theme="dark"] .ads-auth-message.success { border-color:#2f4d35; background:#1f2e22; color:#c8e5bf; }
+html[data-adsplus-theme="dark"] .ads-auth-message.error { border-color:#554038; background:#30231d; color:#e6bda7; }
+html[data-adsplus-theme="dark"] .ads-auth-warning strong, html[data-adsplus-theme="dark"] .ads-auth-warning span, html[data-adsplus-theme="dark"] .ads-auth-footnote, html[data-adsplus-theme="dark"] .ads-auth-footer { color:#b0a499; }
+html[data-adsplus-theme="light"] .ads-auth-mark.ads-logo-missing, html:not([data-adsplus-theme="dark"]) .ads-auth-mark.ads-logo-missing { background:transparent; box-shadow:none; }
+html[data-adsplus-theme="light"] .ads-auth-logo-fallback, html:not([data-adsplus-theme="dark"]) .ads-auth-logo-fallback { color:#222; }
+html[data-adsplus-theme="dark"] .ads-auth-mark.ads-logo-missing { background:transparent; box-shadow:none; }
+html[data-adsplus-theme="dark"] .ads-auth-logo-fallback { color:#fff; }
+html[data-adsplus-theme="dark"], html[data-adsplus-theme="dark"] body { background:#111110; color-scheme:dark; }
+/* Compatibility for the initial login update (before the separate UI-polish update). */
+.ads-auth-mark.ads-auth-custom-mark { position:relative; background:transparent !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; overflow:hidden; }
+.ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-light, .ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-dark { position:absolute; inset:0; display:block; width:100%; height:100%; padding:0; object-fit:contain; }
+.ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-dark { display:none; }
+.ads-auth-custom-mark .ads-auth-logo-fallback { display:none; position:relative; color:#222; font-size:21px; font-weight:850; letter-spacing:-1px; }
+.ads-auth-custom-mark.ads-logo-missing .ads-auth-logo-fallback { display:block; }
+html[data-adsplus-theme="dark"] .ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-light { display:none; }
+html[data-adsplus-theme="dark"] .ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-dark { display:block; }
+html[data-adsplus-theme="dark"] .ads-auth-custom-mark .ads-auth-logo-fallback { color:#fff; }

@@ -1,0 +1,52 @@
+/* Small additive styles for the live-backend update. Existing styles.css is retained. */
+.backend-pill { max-width: 180px; }
+.backend-pill.status-connected { color: #47673f; background: #edf4e9; border-color: #d6e6ce; }
+.backend-pill.status-connected .demo-dot { background: #5a854e; }
+.backend-pill.status-error { color: #8b342b; background: #fff0ed; border-color: #f1d0c9; }
+.backend-pill.status-error .demo-dot { background: #bd574b; }
+.backend-pill.status-not_configured,
+.backend-pill.status-signed_out { color: #7f654e; background: #f7eee5; border-color: #e9d8c7; }
+.backend-pill.status-checking .demo-dot { background: #c49c57; }
+.connection-active { color: #47673f; background: #edf4e9; }
+.connection-active > span, .status-point-on { background: #5a854e !important; }
+.status-on { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #5a854e; }
+.status-off { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c1b8ac; }
+button:disabled, input:disabled { cursor: not-allowed; opacity: .6; }
+.withdraw-form .amount-input-wrap input:disabled { background: #f8f6f3; }
+.activity-list { min-width: 0; }
+.settings-action { margin-top: 12px; }
+@media (max-width: 560px) {
+  .backend-pill { max-width: 142px; padding-inline: 6px; font-size: 8px; letter-spacing: .2px; }
+}
+
+
+/* Ads+ Google sign-in palette */
+.google-signin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #E5E4E2;
+  border-radius: 12px;
+  background: #E5E4E2;
+  color: #6F4E37;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.google-signin-button svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.google-signin-button:hover { background: #E6E0F0; border-color: #6F4E37; }
+.google-signin-button:disabled { opacity: .65; cursor: wait; }
+.profile-hero { border-color: #E5E4E2; }
+.profile-chips span { color: #6F4E37; }
+.connection-status { color: #6F4E37; }
+[data-adsplus-theme="dark"] .google-signin-button {
+  background: #E6E0F0;
+  color: #6F4E37;
+  border-color: #E5E4E2;
+}
+@media (max-width: 560px) {
+  .google-signin-button { width: 100%; }
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+npm-debug.log*
+
+# Local backups (keep off GitHub)
+.adsplus-update-backups/
+src/*.before-*

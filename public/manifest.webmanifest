@@ -1,0 +1,12 @@
+{
+  "name": "Ads+ Rewards",
+  "short_name": "Ads+",
+  "description": "Ads+ rewards dashboard prototype",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f5f1",
+  "theme_color": "#6f4e37",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

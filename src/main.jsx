@@ -12,14 +12,14 @@ import './styles.css';
 import './update.css';
 import './dark-mode.css';
 import { apiRequest, clearAccessToken, formatDateTime, formatINRFromPaise, getAccessToken, readApiConfig } from './adsplus-api.js';
-import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, googleProvider } from './firebase.js';
 
 const NAV = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'earnings', label: 'Earnings', icon: ChartNoAxesCombined },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
-  { id: 'coupons', label: 'Creator code', icon: BadgePercent },
+  { id: 'coupons', label: 'Refer & Earn', icon: BadgePercent },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ];
 
@@ -98,7 +98,11 @@ function App() {
 
   const connectAccount = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      const credential = await signInWithPopup(auth, googleProvider);
+      const additionalInfo = getAdditionalUserInfo(credential);
+      console.info('Ads+ Google sign-in completed.', {
+        isNewUser: additionalInfo?.isNewUser === true
+      });
       notify('Google sign-in successful. Backend data still requires server authentication.');
     } catch (error) {
       console.error('Google sign-in failed:', error);
@@ -176,7 +180,7 @@ function App() {
   </div>;
 }
 
-function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', coupons: 'Creator code', profile: 'Profile', help: 'Help centre' })[page] || 'Overview'; }
+function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', coupons: 'Refer & Earn', profile: 'Profile', help: 'Help centre' })[page] || 'Overview'; }
 function PageHeading({ eyebrow, title, subtitle, action }) { return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action && <div className="heading-action">{action}</div>}</div>; }
 function SetupNotice({ title = 'Connect your Ads+ account', children, action }) { return <section className="notice-strip"><span className="notice-icon"><ShieldCheck size={19} /></span><div><strong>{title}</strong><p>{children}</p>{action && <div className="setup-action">{action}</div>}</div></section>; }
 
@@ -239,23 +243,71 @@ function WalletPage({ notify, dashboard, backendState, onWithdraw }) {
   return <><PageHeading eyebrow="WALLET & PAYOUTS" title="Wallet" subtitle={connected ? 'Balance and payout history from your connected Ads+ account.' : 'No local wallet balance is invented or stored.'} /><section className="wallet-page-grid"><section className="wallet-main-card"><div className="wallet-main-top"><span><Wallet size={16} /> AVAILABLE BALANCE</span><LockKeyhole size={16} /></div><strong>{formatINRFromPaise(connected ? wallet.available_paise : undefined)}</strong><p>{connected ? 'Reported by Ads+ server' : 'Waiting for verified account data'}</p><div className="wallet-mini-stats"><div><small>Pending rewards</small><b>{formatINRFromPaise(connected ? wallet.pending_paise : undefined)}</b></div><div><small>Total earned</small><b>{formatINRFromPaise(connected ? wallet.total_earned_paise : undefined)}</b></div></div></section><section className="section-card withdraw-card"><div className="section-header"><div><h2>Withdraw funds</h2><p>{payoutEnabled ? 'Submit a request for server-side validation.' : 'Withdrawals are controlled by the Ads+ backend.'}</p></div><span className="small-icon"><ArrowUpRight size={18} /></span></div><div className="warning-callout"><CircleAlert size={17} /><p><strong>{payoutEnabled ? 'Server validation required.' : 'Not available yet.'}</strong> {payoutEnabled ? 'The server must confirm the available balance, account status and payout eligibility before accepting a request.' : 'The payout service must be enabled by Ads+ before a withdrawal can be submitted.'}</p></div><form className="withdraw-form" onSubmit={submit}><label htmlFor="withdraw-amount">Amount (INR)</label><div className="amount-input-wrap"><span>₹</span><input id="withdraw-amount" type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="Enter amount" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!payoutEnabled || sending} required /></div><label htmlFor="withdraw-upi">UPI ID / payout destination</label><input id="withdraw-upi" type="text" autoComplete="off" placeholder="Enter your approved payout ID" value={upiId} onChange={(event) => setUpiId(event.target.value)} disabled={!payoutEnabled || sending} required /><p className="field-helper">The payout provider and server—not this app—must validate and execute the payment.</p><button className="primary-button form-submit" type="submit" disabled={!payoutEnabled || sending}>{sending ? 'Submitting…' : payoutEnabled ? 'Request withdrawal' : 'Withdrawals unavailable'} <LockKeyhole size={15} /></button></form></section></section><section className="section-card payment-explainer"><div className="explainer-icon"><ShieldCheck size={19} /></div><div><h2>Secure payout process</h2><p>Only server-side ledger balances and verified payout-provider results may be treated as real. Never trust a balance stored only in the browser.</p></div></section><section className="section-card"><div className="section-header"><div><h2>Withdrawal activity</h2><p>Confirmed requests returned by the Ads+ backend.</p></div></div><ActivityList items={connected ? withdrawals : []} emptyTitle="No live withdrawal records" emptyText={connected ? 'The backend has not returned any withdrawal requests.' : 'Sign in and connect a real backend to view payout history.'} /></section></>;
 }
 
-function CouponsPage({ notify, dashboard, backendState, onRedeem }) {
-  const [code, setCode] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const connected = backendState.status === 'connected' && Boolean(dashboard);
-  const codesEnabled = connected && dashboard?.services?.coupons_enabled === true;
-  const savedCode = dashboard?.coupon_attribution?.code || dashboard?.coupon?.code || '';
-  const submit = async (event) => {
-    event.preventDefault();
-    if (!code.trim()) { notify('Enter a creator code first.'); return; }
-    setSubmitting(true);
-    try { await onRedeem(code.trim()); setCode(''); }
-    catch (error) { notify(error?.message || 'The creator code could not be verified.'); }
-    finally { setSubmitting(false); }
+function CouponsPage({ notify, dashboard, backendState }) {
+  const [expandedList, setExpandedList] = useState('');
+  const connected = backendState?.status === 'connected' && Boolean(dashboard);
+  const referrals = dashboard?.referrals || {};
+  const active = Array.isArray(referrals.active_codes) ? referrals.active_codes : [];
+  const expired = Array.isArray(referrals.expired_codes) ? referrals.expired_codes : [];
+  const earnings = referrals.earnings || {};
+  const generated = Number.isInteger(referrals.generated_this_month) ? referrals.generated_this_month : null;
+  const remaining = generated === null ? null : Math.max(0, 2 - generated);
+  const enabled = connected && dashboard?.services?.referrals_enabled === true;
+  const money = v => Number.isInteger(v) ? formatINRFromPaise(v) : '—';
+  const generate = () => {
+    if (!connected) return notify('Backend not connected. No code was generated.');
+    if (!enabled) return notify('Referral service is not enabled by the server.');
+    if (remaining === 0) return notify('Monthly limit reached: maximum 2 codes.');
+    return notify('Code-generation API is not implemented. No code was generated.');
   };
-  return <><PageHeading eyebrow="CREATOR COMMUNITY" title="Creator codes" subtitle={connected ? 'Code redemption is verified by the connected Ads+ service.' : 'Creator codes are not accepted locally or treated as valid without server verification.'} /><section className="coupon-hero"><div className="coupon-pattern"><span /><span /><span /><span /></div><div className="coupon-hero-icon"><Gift size={22} /></div><div className="eyebrow">SUPPORT A CREATOR</div><h2>Use a creator’s unique code.</h2><p>Ads+ must validate a creator code, check its active owner, and record attribution on the server before any reward benefit applies.</p><form className="coupon-form" onSubmit={submit}><label htmlFor="creator-code" className="sr-only">Creator code</label><input id="creator-code" placeholder="ENTER CREATOR CODE" maxLength={32} autoCapitalize="characters" value={code} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/\s/g, ''))} disabled={!codesEnabled || submitting} /><button type="submit" disabled={!codesEnabled || submitting}>{submitting ? 'Checking…' : 'Verify code'} <ArrowRight size={14} /></button></form>{savedCode && connected && <div className="applied-code"><CheckCircle2 size={14} /> Verified attribution: <strong>{savedCode}</strong></div>}<div className="coupon-demo-note"><CircleAlert size={15} /> {codesEnabled ? 'The code will be checked by Ads+ before attribution is applied.' : 'Codes stay disabled until the authenticated backend explicitly enables the service.'}</div></section><div className="coupon-benefits"><section className="section-card benefit-card"><span className="benefit-icon lavender"><Sparkles size={20} /></span><div className="eyebrow">FOR YOU</div><h3>Eligible user benefit</h3><p>The planned programme can add a 1% benefit to eligible rewards only when the backend confirms a valid coupon attribution.</p><span className="benefit-tag">{connected && dashboard?.services?.coupons_enabled ? 'Server enabled' : 'Not active'}</span></section><section className="section-card benefit-card"><span className="benefit-icon brown"><BadgePercent size={20} /></span><div className="eyebrow">FOR CREATORS</div><h3>Creator commissions</h3><p>The planned programme assigns 5% commission on eligible referred-user earnings, tracked against the original creator record by the server.</p><span className="benefit-tag">{connected && dashboard?.services?.creator_commissions_enabled ? 'Server enabled' : 'Not active'}</span></section></div><section className="section-card code-rules"><div className="section-header"><div><h2>Attribution safeguards</h2><p>Rules the backend must enforce.</p></div></div><RuleRow number="01" title="Validate every code" detail="The server checks code status and owner before attribution." /><RuleRow number="02" title="Keep history stable" detail="Retiring a code must not transfer old attribution or earnings." /><RuleRow number="03" title="Count verified activity" detail="Only eligible, confirmed events can count toward rewards or commissions." /></section></>;
-}
+  const copy = async code => {
+    try {
+      if (!navigator.clipboard?.writeText) throw Error();
+      await navigator.clipboard.writeText(code);
+      notify('Referral code copied.');
+    } catch { notify('Copy unavailable. Copy the code manually.'); }
+  };
+  const CodeList = ({ items, isExpired = false }) => items.length ? <div className="refer-code-list">
+    {items.map((item, i) => <article className="refer-code-row" key={item.id || item.code || i}>
+      <div className="refer-code-main"><strong>{item.code || 'Code unavailable'}</strong>
+        <small>{isExpired ? 'Expired' : 'Expires'}: {item.expires_at ? formatDateTime(item.expires_at) : 'Unavailable'}</small></div>
+      <span className={'refer-status ' + (isExpired ? 'is-expired' : 'is-active')}>{isExpired ? 'Expired' : 'Active'}</span>
+      {!isExpired && item.code && <button type="button" className="refer-copy-button" onClick={() => copy(item.code)}>Copy</button>}
+    </article>)}
+  </div> : <div className="refer-empty"><Link2 size={20}/><strong>{isExpired ? 'No expired codes' : 'No active codes yet'}</strong><span>Server-provided code history appears here when connected.</span></div>;
+  return <>
+    <PageHeading eyebrow="GROW WITH ADS+" title="Refer & Earn" subtitle="Share referral codes and track verified rewards."/>
+    <section className="refer-hero"><div className="refer-hero-copy">
+      <span className="refer-kicker"><Gift size={14}/> YOUR REFERRAL HUB</span>
+      <h2>Share your link.<br/>Grow together.</h2>
+      <p>Invite people to Ads+. The server controls codes, expiry and rewards.</p>
+      <button className="refer-generate-button" type="button" onClick={generate} disabled={!connected || !enabled || remaining === 0}><Plus size={17}/> Generate Code <ArrowRight size={16}/></button>
+      <span className="refer-hero-footnote"><ShieldCheck size={13}/> No fake codes or earnings</span>
+    </div><div className="refer-hero-art" aria-hidden="true"><div className="refer-orbit refer-orbit-one"/><div className="refer-orbit refer-orbit-two"/><div className="refer-gift-graphic"><Gift size={53} strokeWidth={1.35}/></div><span className="refer-spark refer-spark-one">✦</span><span className="refer-spark refer-spark-two">✧</span></div></section>
+    <div className="refer-limit-banner"><span className="refer-limit-icon"><Clock3 size={18}/></span><div><strong>Monthly code limit</strong><p>Maximum 2 codes per account per month. Each expires one month after generation.</p></div><span className="refer-limit-count">{remaining === null ? '— / 2' : remaining + ' / 2 left'}</span></div>
+    {!enabled && <div className="refer-connection-note"><CircleAlert size={17}/><div><strong>Referral service not connected</strong><p>{connected ? 'The server has not enabled referrals or supplied referral data.' : 'Connect the backend to generate codes and load verified earnings.'}</p></div></div>}
+    <div className="refer-stat-grid">
+      <section className="refer-stat-card"><span className="refer-stat-icon"><Link2 size={18}/></span><span className="refer-stat-label">Active codes</span><strong>{connected ? active.length : ''}</strong><small>Currently valid</small></section>
+      <section className="refer-stat-card"><span className="refer-stat-icon refer-icon-purple"><Clock3 size={18}/></span><span className="refer-stat-label">Expired codes</span><strong>{connected ? expired.length : ''}</strong><small>Past code history</small></section>
+      <section className="refer-stat-card"><span className="refer-stat-icon refer-icon-green"><Wallet size={18}/></span><span className="refer-stat-label">Total earned</span><strong>{money(connected ? earnings.total_earned_paise : undefined)}</strong><small>Verified total only</small></section>
+    </div>
+    <section className="section-card refer-section"><div className="section-header"><div><h2><Link2 size={18}/> Generated codes</h2><p>Active codes and expiry dates.</p></div><div className="refer-header-actions"><span className="refer-section-count">{connected ? active.length : ''}</span><button type="button" className="refer-expand-button" aria-label="Expand generated codes" onClick={() => setExpandedList('active')}>⛶</button></div></div><CodeList items={connected ? active : []}/></section>
+    <section className="section-card refer-section"><div className="section-header"><div><h2><Clock3 size={18}/> Expired codes</h2><p>Past code history.</p></div><div className="refer-header-actions"><span className="refer-section-count">{connected ? expired.length : ''}</span><button type="button" className="refer-expand-button" aria-label="Expand expired codes" onClick={() => setExpandedList('expired')}>⛶</button></div></div><CodeList items={connected ? expired : []} isExpired/></section>
+    <section className="section-card refer-section"><div className="section-header"><div><h2><ChartNoAxesCombined size={18}/> Referral earnings</h2><p>Amounts confirmed by the server.</p></div><ShieldCheck size={18}/></div><div className="refer-earnings-grid"><div><span>Pending</span><strong>{money(connected ? earnings.pending_paise : undefined)}</strong><small>Awaiting verification</small></div><div><span>Paid</span><strong>{money(connected ? earnings.paid_paise : undefined)}</strong><small>Confirmed payouts</small></div><div><span>Total earned</span><strong>{money(connected ? earnings.total_earned_paise : undefined)}</strong><small>Verified lifetime total</small></div></div><div className="refer-security-note"><LockKeyhole size={16}/><p>Monthly limits, expiry and earnings must be enforced by the server—not browser storage.</p></div></section>
 
+    {expandedList && <div className="refer-fullscreen" role="dialog" aria-modal="true" aria-label="Referral code list">
+      <header className="refer-fullscreen-header">
+        <div><span>ADS+ REFERRALS</span><h2>{expandedList === 'active' ? 'Generated codes' : 'Expired codes'}</h2><p>{expandedList === 'active' ? 'Your active codes and expiry dates.' : 'Your expired code history.'}</p></div>
+        <button type="button" className="refer-close-button" onClick={() => setExpandedList('')} aria-label="Close list">×</button>
+      </header>
+      <div className="refer-fullscreen-content">
+        <div className="refer-fullscreen-summary"><strong>{connected ? (expandedList === 'active' ? active.length : expired.length) : '—'}</strong><span>{expandedList === 'active' ? 'Active codes' : 'Expired codes'}</span></div>
+        <CodeList items={connected ? (expandedList === 'active' ? active : expired) : []} isExpired={expandedList === 'expired'}/>
+      </div>
+      <footer className="refer-fullscreen-footer"><button type="button" onClick={() => setExpandedList('')}>Back to Refer &amp; Earn</button></footer>
+    </div>}
+  </>;
+}
 function RuleRow({ number, title, detail }) { return <div className="rule-row"><span className="rule-number">{number}</span><div><strong>{title}</strong><p>{detail}</p></div><CheckCircle2 size={17} className="rule-check" /></div>; }
 
 function ProfilePage({ navigate, notify, dashboard, backendState, authUser, authLoading, onConnect, onSignOut }) {

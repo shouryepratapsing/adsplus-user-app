@@ -18,16 +18,20 @@ export function getAccessToken() {
   try { return window.localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
 }
 
+export function setAccessToken(token) {
+  try { if (token) window.localStorage.setItem(TOKEN_KEY, token); } catch { /* storage may be unavailable */ }
+}
+
 export function clearAccessToken() {
   try { window.localStorage.removeItem(TOKEN_KEY); } catch { /* storage may be unavailable */ }
   try { window.dispatchEvent(new Event('adsplus:logged-out')); } catch { /* event support may be unavailable */ }
 }
 
-export async function apiRequest(path, { method = 'GET', body, signal } = {}) {
+export async function apiRequest(path, { method = 'GET', body, signal, accessToken } = {}) {
   const { apiBaseUrl } = await readApiConfig();
   if (!apiBaseUrl) throw new Error('Backend URL is not set. Configure public/adsplus-config.json first.');
   const headers = { Accept: 'application/json' };
-  const token = getAccessToken();
+  const token = accessToken || getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   let response;

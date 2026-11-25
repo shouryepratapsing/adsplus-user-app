@@ -11,9 +11,10 @@ import {
 import './styles.css';
 import './update.css';
 import './dark-mode.css';
-import { apiRequest, clearAccessToken, formatDateTime, formatINRFromPaise, getAccessToken, readApiConfig } from './adsplus-api.js';
+import { apiRequest, clearAccessToken, formatDateTime, formatINRFromPaise, getAccessToken, setAccessToken, readApiConfig } from './adsplus-api.js';
 import { getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, googleProvider } from './firebase.js';
+import AdminPanel from './admin.jsx';
 
 const NAV = [
   { id: 'home', label: 'Home', icon: Home },
@@ -24,7 +25,7 @@ const NAV = [
 ];
 
 function App() {
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState(() => window.location.pathname.startsWith('/admin') ? 'admin' : 'home');
   const [darkMode, setDarkMode] = useState(() => { try { return window.localStorage.getItem('adsplus.theme') === 'dark'; } catch { return false; } });
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState('');
@@ -39,6 +40,7 @@ function App() {
     window.setTimeout(() => setToast(''), 3600);
   };
   const navigate = (target) => {
+    window.history.pushState({}, '', target === 'admin' ? '/admin' : '/');
     setPage(target);
     setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -46,8 +48,16 @@ function App() {
   const refreshData = () => setRefreshKey((v) => v + 1);
 
   useEffect(() => {
+    const onPopState = () => setPage(window.location.pathname.startsWith('/admin') ? 'admin' : 'home');
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
+      if (user) user.getIdToken(true).then((token) => { setAccessToken(token); refreshData(); }).catch((error) => console.error('Firebase token refresh failed:', error));
+      else clearAccessToken();
       setAuthLoading(false);
     }, (error) => {
       console.error('Firebase auth state error:', error);
@@ -73,28 +83,46 @@ function App() {
         setBackendState({ status: 'not_configured', message: 'No backend URL is configured. Real account data cannot load until Ads+ server services are deployed and connected.' });
         return;
       }
-      if (!getAccessToken()) {
+      const token = authUser ? await authUser.getIdToken() : getAccessToken();
+      if (!token) {
         setDashboard(null);
-        setBackendState({ status: 'signed_out', message: 'Backend URL is set. Connect your email account to request live, server-verified data.' });
+        setBackendState({ status: 'signed_out', message: 'Sign in with Google to load Firebase-authenticated account earnings.' });
         return;
       }
       try {
-        const payload = await apiRequest('/api/v1/me/dashboard');
+        const [earnings, history] = await Promise.all([
+          apiRequest('/v1/me/earnings', { accessToken: token }),
+          apiRequest('/v1/me/history?limit=50&offset=0', { accessToken: token })
+        ]);
         if (!active) return;
-        setDashboard(payload?.dashboard || payload);
-        setBackendState({ status: 'connected', message: 'Account connected. Values below are loaded from the configured Ads+ backend.' });
+        const toPaise = (milli) => { try { return (BigInt(milli || 0) / 1000n).toString(); } catch { return '0'; } };
+        const entries = (history.items || []).map(item => ({
+          id: item.id, type: item.kind, label: item.kind === 'payout' ? 'Payout request' : 'Verified ad reward',
+          description: item.kind === 'payout' ? 'Payout request' : 'Verified ad reward',
+          created_at: item.occurred_at, status: item.status, reference: item.reference,
+          amount_paise: toPaise(item.amount_milli_paise)
+        }));
+        const payoutItems = entries.filter(item => item.type === 'payout');
+        setDashboard({
+          user: { id: authUser?.uid || '', email: authUser?.email || '', display_name: authUser?.displayName || '' },
+          wallet: {
+            available_paise: toPaise(earnings.withdrawable_milli_paise),
+            pending_paise: toPaise(earnings.pending_milli_paise),
+            total_earned_paise: toPaise(earnings.credited_milli_paise)
+          },
+          metrics: {}, services: { payout_enabled: true, extension_connected: false, reward_modes: {} },
+          recent_activity: entries.slice(0, 8), reward_ledger: entries.filter(item => item.type === 'reward'),
+          withdrawals: payoutItems, earnings
+        });
+        setBackendState({ status: 'connected', message: 'Account connected. Earnings and history are read from the Ads+ milli-paise ledger.' });
       } catch (error) {
         if (!active) return;
         setDashboard(null);
-        const unauthorised = !getAccessToken();
-        setBackendState({
-          status: unauthorised ? 'signed_out' : 'error',
-          message: error?.message || 'Could not load the live Ads+ dashboard.',
-        });
+        setBackendState({ status: !getAccessToken() ? 'signed_out' : 'error', message: error?.message || 'Could not load live Ads+ earnings.' });
       }
     })();
     return () => { active = false; };
-  }, [refreshKey]);
+  }, [refreshKey, authUser]);
 
   const connectAccount = async () => {
     try {
@@ -103,7 +131,10 @@ function App() {
       console.info('Ads+ Google sign-in completed.', {
         isNewUser: additionalInfo?.isNewUser === true
       });
-      notify('Google sign-in successful. Backend data still requires server authentication.');
+      const token = await credential.user.getIdToken(true);
+      setAccessToken(token);
+      refreshData();
+      notify('Google sign-in successful. Loading server-verified earnings.');
     } catch (error) {
       console.error('Google sign-in failed:', error);
       notify(error?.code === 'auth/unauthorized-domain'
@@ -137,15 +168,16 @@ function App() {
     const rupees = Number(amount);
     if (!Number.isFinite(rupees) || rupees <= 0) throw new Error('Enter a valid withdrawal amount greater than zero.');
     if (!upiId || !upiId.trim()) throw new Error('Enter the payout destination requested by Ads+.');
-    const result = await apiRequest('/api/v1/withdrawals', {
+    const result = await apiRequest('/v1/payouts', {
       method: 'POST',
-      body: { amount_paise: Math.round(rupees * 100), method: 'upi', destination: upiId.trim() },
+      body: { amount_paise: Math.round(rupees * 100), upi_id: upiId.trim() },
     });
     refreshData();
     return result;
   };
 
   const profile = dashboard?.user || dashboard?.profile || {};
+  const navItems = authUser ? [...NAV, { id: 'admin', label: 'Admin panel', icon: ShieldCheck }] : NAV;
   const statusLabel = ({ checking: 'CHECKING', not_configured: 'BACKEND NEEDED', signed_out: 'SIGN IN REQUIRED', connected: 'LIVE ACCOUNT', error: 'CONNECTION ERROR' })[backendState.status] || 'ACCOUNT STATUS';
   return <div className={`app-shell ${darkMode ? 'theme-dark' : 'theme-light'}`}>
     <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -154,7 +186,7 @@ function App() {
         <span className="brand-copy"><strong>Ads<span>+</span></strong><small>REWARDS, REIMAGINED</small></span>
       </button>
       <div className="sidebar-caption">YOUR WORKSPACE</div>
-      <nav className="side-nav" aria-label="Main navigation">{NAV.map((item) => {
+      <nav className="side-nav" aria-label="Main navigation">{navItems.map((item) => {
         const Icon = item.icon;
         return <button key={item.id} className={`nav-item ${page === item.id ? 'selected' : ''}`} onClick={() => navigate(item.id)}><Icon size={18} /><span>{item.label}</span>{page === item.id && <span className="nav-dot" />}</button>;
       })}</nav>
@@ -172,6 +204,7 @@ function App() {
         {page === 'coupons' && <CouponsPage notify={notify} dashboard={dashboard} backendState={backendState} onRedeem={redeemCreatorCode} />}
         {page === 'profile' && <ProfilePage navigate={navigate} notify={notify} dashboard={dashboard} backendState={backendState} authUser={authUser} authLoading={authLoading} onConnect={connectAccount} onSignOut={signOut} />}
         {page === 'help' && <HelpPage notify={notify} />}
+        {page === 'admin' && <AdminPanel authUser={authUser} />}
       </main>
       <footer className="page-footer"><span>© 2026 Ads+</span><span className="footer-dot">·</span><button onClick={() => navigate('help')}>Help centre</button><span className="footer-spacer" /><span className="footer-lock"><LockKeyhole size={12} /> {backendState.status === 'connected' ? 'Live account connected' : 'Live account not connected'}</span></footer>
     </div>
@@ -180,7 +213,7 @@ function App() {
   </div>;
 }
 
-function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', coupons: 'Refer & Earn', profile: 'Profile', help: 'Help centre' })[page] || 'Overview'; }
+function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', coupons: 'Refer & Earn', profile: 'Profile', help: 'Help centre', admin: 'Admin panel' })[page] || 'Overview'; }
 function PageHeading({ eyebrow, title, subtitle, action }) { return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action && <div className="heading-action">{action}</div>}</div>; }
 function SetupNotice({ title = 'Connect your Ads+ account', children, action }) { return <section className="notice-strip"><span className="notice-icon"><ShieldCheck size={19} /></span><div><strong>{title}</strong><p>{children}</p>{action && <div className="setup-action">{action}</div>}</div></section>; }
 
@@ -240,7 +273,7 @@ function WalletPage({ notify, dashboard, backendState, onWithdraw }) {
       notify(error?.message || 'Withdrawal request failed.');
     } finally { setSending(false); }
   };
-  return <><PageHeading eyebrow="WALLET & PAYOUTS" title="Wallet" subtitle={connected ? 'Balance and payout history from your connected Ads+ account.' : 'No local wallet balance is invented or stored.'} /><section className="wallet-page-grid"><section className="wallet-main-card"><div className="wallet-main-top"><span><Wallet size={16} /> AVAILABLE BALANCE</span><LockKeyhole size={16} /></div><strong>{formatINRFromPaise(connected ? wallet.available_paise : undefined)}</strong><p>{connected ? 'Reported by Ads+ server' : 'Waiting for verified account data'}</p><div className="wallet-mini-stats"><div><small>Pending rewards</small><b>{formatINRFromPaise(connected ? wallet.pending_paise : undefined)}</b></div><div><small>Total earned</small><b>{formatINRFromPaise(connected ? wallet.total_earned_paise : undefined)}</b></div></div></section><section className="section-card withdraw-card"><div className="section-header"><div><h2>Withdraw funds</h2><p>{payoutEnabled ? 'Submit a request for server-side validation.' : 'Withdrawals are controlled by the Ads+ backend.'}</p></div><span className="small-icon"><ArrowUpRight size={18} /></span></div><div className="warning-callout"><CircleAlert size={17} /><p><strong>{payoutEnabled ? 'Server validation required.' : 'Not available yet.'}</strong> {payoutEnabled ? 'The server must confirm the available balance, account status and payout eligibility before accepting a request.' : 'The payout service must be enabled by Ads+ before a withdrawal can be submitted.'}</p></div><form className="withdraw-form" onSubmit={submit}><label htmlFor="withdraw-amount">Amount (INR)</label><div className="amount-input-wrap"><span>₹</span><input id="withdraw-amount" type="number" inputMode="decimal" min="0.01" step="0.01" placeholder="Enter amount" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!payoutEnabled || sending} required /></div><label htmlFor="withdraw-upi">UPI ID / payout destination</label><input id="withdraw-upi" type="text" autoComplete="off" placeholder="Enter your approved payout ID" value={upiId} onChange={(event) => setUpiId(event.target.value)} disabled={!payoutEnabled || sending} required /><p className="field-helper">The payout provider and server—not this app—must validate and execute the payment.</p><button className="primary-button form-submit" type="submit" disabled={!payoutEnabled || sending}>{sending ? 'Submitting…' : payoutEnabled ? 'Request withdrawal' : 'Withdrawals unavailable'} <LockKeyhole size={15} /></button></form></section></section><section className="section-card payment-explainer"><div className="explainer-icon"><ShieldCheck size={19} /></div><div><h2>Secure payout process</h2><p>Only server-side ledger balances and verified payout-provider results may be treated as real. Never trust a balance stored only in the browser.</p></div></section><section className="section-card"><div className="section-header"><div><h2>Withdrawal activity</h2><p>Confirmed requests returned by the Ads+ backend.</p></div></div><ActivityList items={connected ? withdrawals : []} emptyTitle="No live withdrawal records" emptyText={connected ? 'The backend has not returned any withdrawal requests.' : 'Sign in and connect a real backend to view payout history.'} /></section></>;
+  return <><PageHeading eyebrow="WALLET & PAYOUTS" title="Wallet" subtitle={connected ? 'Balance and payout history from your connected Ads+ account.' : 'No local wallet balance is invented or stored.'} /><section className="wallet-page-grid"><section className="wallet-main-card"><div className="wallet-main-top"><span><Wallet size={16} /> AVAILABLE BALANCE</span><LockKeyhole size={16} /></div><strong>{formatINRFromPaise(connected ? wallet.available_paise : undefined)}</strong><p>{connected ? 'Reported by Ads+ server' : 'Waiting for verified account data'}</p><div className="wallet-mini-stats"><div><small>Pending rewards</small><b>{formatINRFromPaise(connected ? wallet.pending_paise : undefined)}</b></div><div><small>Total earned</small><b>{formatINRFromPaise(connected ? wallet.total_earned_paise : undefined)}</b></div></div></section><section className="section-card withdraw-card"><div className="section-header"><div><h2>Withdraw funds</h2><p>{payoutEnabled ? 'Submit a request for server-side validation.' : 'Withdrawals are controlled by the Ads+ backend.'}</p></div><span className="small-icon"><ArrowUpRight size={18} /></span></div><div className="warning-callout"><CircleAlert size={17} /><p><strong>{payoutEnabled ? 'Server validation required.' : 'Not available yet.'}</strong> {payoutEnabled ? 'The server must confirm the available balance, account status and payout eligibility before accepting a request.' : 'The payout service must be enabled by Ads+ before a withdrawal can be submitted.'}</p></div><form className="withdraw-form" onSubmit={submit}><label htmlFor="withdraw-amount">Amount (INR)</label><div className="amount-input-wrap"><span>₹</span><input id="withdraw-amount" type="number" inputMode="decimal" min="20" step="0.01" placeholder="Enter amount" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!payoutEnabled || sending} required /></div><label htmlFor="withdraw-upi">UPI ID / payout destination</label><input id="withdraw-upi" type="text" autoComplete="off" placeholder="Enter your approved payout ID" value={upiId} onChange={(event) => setUpiId(event.target.value)} disabled={!payoutEnabled || sending} required /><p className="field-helper">The payout provider and server—not this app—must validate and execute the payment.</p><button className="primary-button form-submit" type="submit" disabled={!payoutEnabled || sending}>{sending ? 'Submitting…' : payoutEnabled ? 'Request withdrawal' : 'Withdrawals unavailable'} <LockKeyhole size={15} /></button></form></section></section><section className="section-card payment-explainer"><div className="explainer-icon"><ShieldCheck size={19} /></div><div><h2>Secure payout process</h2><p>Only server-side ledger balances and verified payout-provider results may be treated as real. Never trust a balance stored only in the browser.</p></div></section><section className="section-card"><div className="section-header"><div><h2>Withdrawal activity</h2><p>Confirmed requests returned by the Ads+ backend.</p></div></div><ActivityList items={connected ? withdrawals : []} emptyTitle="No live withdrawal records" emptyText={connected ? 'The backend has not returned any withdrawal requests.' : 'Sign in and connect a real backend to view payout history.'} /></section></>;
 }
 
 function CouponsPage({ notify, dashboard, backendState }) {

@@ -92,29 +92,29 @@ function App() {
       try {
         const [earnings, history] = await Promise.all([
           apiRequest('/v1/me/earnings', { accessToken: token }),
-          apiRequest('/v1/me/history?limit=50&offset=0', { accessToken: token })
+          apiRequest('/v1/me/earnings/history?limit=50&offset=0', { accessToken: token })
         ]);
         if (!active) return;
         const toPaise = (milli) => { try { return (BigInt(milli || 0) / 1000n).toString(); } catch { return '0'; } };
         const entries = (history.items || []).map(item => ({
           id: item.id, type: item.kind, label: item.kind === 'payout' ? 'Payout request' : 'Verified ad reward',
           description: item.kind === 'payout' ? 'Payout request' : 'Verified ad reward',
-          created_at: item.occurred_at, status: item.status, reference: item.reference,
-          amount_paise: toPaise(item.amount_milli_paise)
+          created_at: item.created_at, status: item.status, reference: item.reference,
+          amount_paise: item.amount_paise ?? toPaise(item.amount_milli_paise)
         }));
         const payoutItems = entries.filter(item => item.type === 'payout');
         setDashboard({
           user: { id: authUser?.uid || '', email: authUser?.email || '', display_name: authUser?.displayName || '' },
           wallet: {
-            available_paise: toPaise(earnings.withdrawable_milli_paise),
-            pending_paise: toPaise(earnings.pending_milli_paise),
-            total_earned_paise: toPaise(earnings.credited_milli_paise)
+            available_paise: earnings.wallet_balance_paise || '0',
+            pending_paise: toPaise(earnings.pending_rewards_milli_paise),
+            total_earned_paise: toPaise(earnings.credited_rewards_milli_paise)
           },
           metrics: {}, services: { payout_enabled: true, extension_connected: false, reward_modes: {} },
           recent_activity: entries.slice(0, 8), reward_ledger: entries.filter(item => item.type === 'reward'),
           withdrawals: payoutItems, earnings
         });
-        setBackendState({ status: 'connected', message: 'Account connected. Earnings and history are read from the Ads+ milli-paise ledger.' });
+        setBackendState({ status: 'connected', message: 'Account connected. Wallet balance is paise; reward history retains milli-paise audit precision.' });
       } catch (error) {
         if (!active) return;
         setDashboard(null);
@@ -165,12 +165,15 @@ function App() {
   };
 
   const requestWithdrawal = async ({ amount, upiId }) => {
-    const rupees = Number(amount);
-    if (!Number.isFinite(rupees) || rupees <= 0) throw new Error('Enter a valid withdrawal amount greater than zero.');
+    const amountText = String(amount ?? '').trim();
+    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(amountText)) throw new Error('Enter an amount with up to 2 decimal places.');
+    const [whole, fraction = ''] = amountText.split('.');
+    const paise = BigInt(whole) * 100n + BigInt(fraction.padEnd(2,'0'));
+    if (paise < 2000n) throw new Error('Minimum payout is ₹20.');
     if (!upiId || !upiId.trim()) throw new Error('Enter the payout destination requested by Ads+.');
     const result = await apiRequest('/v1/payouts', {
       method: 'POST',
-      body: { amount_paise: Math.round(rupees * 100), upi_id: upiId.trim() },
+      body: { amount_paise: paise.toString(), upi_id: upiId.trim() },
     });
     refreshData();
     return result;

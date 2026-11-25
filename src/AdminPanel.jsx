@@ -1,50 +1,149 @@
-import React,{useCallback,useEffect,useState} from 'react';
-import {onAuthStateChanged,signInWithPopup,signOut} from 'firebase/auth';
-import {auth,googleProvider} from './firebase.js';
-import {readApiConfig} from './adsplus-api.js';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ShieldCheck, RefreshCw, Users, Wallet, BarChart3, Ban, CheckCircle2, AlertCircle } from 'lucide-react';
+import { apiRequest } from './adsplus-api.js';
+import { auth } from './firebase.js';
 import './admin.css';
 
-const money=(milli)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(Number(milli||0)/100000);
-const moneyPaise=(p)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:2}).format(Number(p||0)/100);
-async function getApiOrigin(){return (await readApiConfig(true)).apiBaseUrl;}
-function AdminPanel(){
- const [user,setUser]=useState(null),[authReady,setAuthReady]=useState(false),[admin,setAdmin]=useState(null),[metrics,setMetrics]=useState(null),[users,setUsers]=useState([]),[payouts,setPayouts]=useState([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
- const call=useCallback(async(path,options={})=>{
-  const current=auth.currentUser;if(!current)throw new Error('Sign in with your authorized admin Google account.');
-  const origin=await getApiOrigin();if(!origin)throw new Error('Ads+ API URL is missing in public/adsplus-config.json');
-  const token=await current.getIdToken(true);
-  const response=await fetch(origin+path,{...options,headers:{Accept:'application/json',Authorization:'Bearer '+token,...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})},body:options.body?JSON.stringify(options.body):undefined,mode:'cors',credentials:'omit'});
-  const body=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(body.error||'API request failed ('+response.status+')');
-  return body;
- },[]);
- const refresh=useCallback(async()=>{
-  setLoading(true);setError('');
-  try{
-   const a=await call('/v1/admin/auth');setAdmin(a.admin);
-   const [d,u,p]=await Promise.all([call('/v1/admin/dashboard'),call('/v1/admin/users?limit=50&offset=0'),call('/v1/admin/payouts?limit=50&offset=0')]);
-   setMetrics(d.metrics||{});setUsers(u.items||[]);setPayouts(p.items||[]);
-  }catch(e){setAdmin(null);setError(e.message||'Could not load admin data.');}
-  finally{setLoading(false);}
- },[call]);
- useEffect(()=>onAuthStateChanged(auth,u=>{setUser(u);setAuthReady(true);if(!u){setAdmin(null);setMetrics(null);setUsers([]);setPayouts([]);}}),[]);
- useEffect(()=>{if(user)refresh();},[user,refresh]);
- const act=async(fn,msg)=>{try{await fn();setNotice(msg);await refresh();}catch(e){setError(e.message||'Action failed');}};
- if(!authReady)return <AdminFrame><p>Checking sign-in…</p></AdminFrame>;
- if(!user)return <AdminFrame><section className="admin-login"><span className="admin-eyebrow">ADS+ ADMIN</span><h1>Authorized access only</h1><p>Sign in with the Firebase account whose UID is allowlisted by the API.</p><button onClick={()=>signInWithPopup(auth,googleProvider)}>Sign in with Google</button></section></AdminFrame>;
- return <AdminFrame>
-  <header className="admin-top"><div><span className="admin-eyebrow">ADS+ CONTROL ROOM</span><h1>Admin dashboard</h1><p>{admin?admin.role+' administrator · '+(admin.email||admin.uid):'Verifying admin UID…'}</p></div><div className="admin-top-actions"><button className="admin-secondary" onClick={refresh}>Refresh</button><button className="admin-secondary" onClick={()=>signOut(auth)}>Sign out</button></div></header>
-  {error&&<div className="admin-alert" role="alert">{error}</div>}{notice&&<div className="admin-notice" role="status">{notice}</div>}
-  {admin&&<>
-   <section className="admin-metrics">
-    <Metric label="Users" value={metrics?.users_total}/><Metric label="Active users" value={metrics?.users_active}/><Metric label="Suspended" value={metrics?.users_banned}/><Metric label="Campaigns live" value={metrics?.campaigns_active}/><Metric label="Impressions · 24h" value={metrics?.impressions_24h}/><Metric label="Gross earned" value={money(metrics?.revenue_total_milli_paise)}/><Metric label="Platform share" value={money(metrics?.platform_share_total_milli_paise)}/><Metric label="Pending payouts" value={metrics?.payouts_pending}/>
-   </section>
-   <section className="admin-panel"><div className="admin-section-title"><div><h2>Users</h2><p>Server status and lifetime verified rewards.</p></div><span>{users.length} shown</span></div><div className="admin-table-wrap"><table><thead><tr><th>User</th><th>Status</th><th>Rewards · lifetime</th><th>Pending</th><th>Actions</th></tr></thead><tbody>{users.map(u=><tr key={u.id}><td><strong>{u.display_name||'Account'}</strong><small>{u.email||u.id}</small></td><td><span className={'admin-status '+(u.status==='active'?'is-active':'is-suspended')}>{u.status}</span></td><td>{money(u.earned_total_milli_paise)}</td><td>{money(u.earned_pending_milli_paise)}</td><td><button className="admin-action" disabled={loading||u.id===auth.currentUser?.uid} onClick={()=>act(()=>call('/v1/admin/users/'+u.id,{method:'PATCH',body:{status:u.status==='active'?'suspended':'active'}}),u.status==='active'?'User suspended':'User reactivated')}>{u.status==='active'?'Ban':'Unban'}</button></td></tr>)}</tbody></table></div></section>
-   <section className="admin-panel"><div className="admin-section-title"><div><h2>Payout requests</h2><p>UPI is masked by the API. ₹ amounts shown in paise conversion.</p></div><span>{payouts.length} shown</span></div><div className="admin-table-wrap"><table><thead><tr><th>User / request</th><th>Amount</th><th>UPI</th><th>Status</th><th>Review</th></tr></thead><tbody>{payouts.map(p=><tr key={p.id}><td><strong>{p.display_name||p.email||p.user_id}</strong><small>{p.id}</small></td><td>{moneyPaise(p.amount_paise)}</td><td>{p.upi_id||'—'}</td><td><span className="admin-status">{p.status}</span></td><td className="admin-payout-actions">{p.status==='pending'&&<><button className="admin-action" onClick={()=>act(()=>call('/v1/admin/payouts/'+p.id,{method:'PATCH',body:{action:'approve'}}),'Payout approved')}>Approve</button><button className="admin-action danger" onClick={()=>act(()=>call('/v1/admin/payouts/'+p.id,{method:'PATCH',body:{action:'reject'}}),'Payout rejected')}>Reject</button></>}{p.status==='approved'&&<button className="admin-action" onClick={()=>{const utr=window.prompt('Enter bank UTR / transfer reference');if(utr)act(()=>call('/v1/admin/payouts/'+p.id,{method:'PATCH',body:{action:'mark_paid',utr_reference:utr.trim()}}),'Payout marked paid');}}>Mark paid</button>}{['paid','rejected','void'].includes(p.status)&&<span>Closed</span>}</td></tr>)}</tbody></table></div></section>
-  </>}
-  {loading&&<p className="admin-loading">Syncing live server data…</p>}
- </AdminFrame>;
+const TABS = [
+  ['dashboard','Dashboard'],['users','Users'],['campaigns','Campaigns'],['ads','Ads'],
+  ['revenue','Revenue'],['earnings','Earnings'],['payouts','Payouts'],['audit-log','Audit log']
+];
+const PATHS = { campaigns:'/v1/admin/campaigns', ads:'/v1/admin/ads', revenue:'/v1/admin/revenue',
+  earnings:'/v1/admin/earnings', payouts:'/v1/admin/payouts', 'audit-log':'/v1/admin/audit-log' };
+const PAISE_FIELDS = new Set(['amount_paise','rate_paise','budget_paise','spent_paise']);
+const PAISE_FIELDS = new Set(['amount_paise','rate_paise','budget_paise','spent_paise']);
+const MONEY_FIELDS = new Set(['revenue_total_milli_paise','platform_share_total_milli_paise',
+  'rewards_pending_milli_paise','earned_total_milli_paise','earned_pending_milli_paise',
+  'earned_rejected_milli_paise','amount_milli_paise','revenue_milli_paise','platform_milli_paise']);
+
+function moneyMilli(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  try {
+    const paise = BigInt(value) / 1000n;
+    const rupees = paise / 100n;
+    const cents = String(paise % 100n).padStart(2,'0');
+    return '₹' + new Intl.NumberFormat('en-IN').format(rupees) + '.' + cents;
+  } catch { return '—'; }
 }
-function Metric({label,value}){return <article className="admin-metric"><span>{label}</span><strong>{value===undefined?'—':value}</strong></article>}
-function AdminFrame({children}){return <main className="admin-root"><div className="admin-wrap">{children}<footer>Ads+ Admin · actions are verified and audited by the API.</footer></div></main>}
-export default AdminPanel;
+function moneyPaise(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  try {
+    const paise = BigInt(value);
+    const rupees = paise / 100n;
+    const cents = String(paise % 100n).padStart(2,'0');
+    return '₹' + new Intl.NumberFormat('en-IN').format(rupees) + '.' + cents;
+  } catch { return '—'; }
+}
+function moneyPaise(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  try {
+    const paise = BigInt(value);
+    const rupees = paise / 100n;
+    const cents = String(paise % 100n).padStart(2,'0');
+    return '₹' + new Intl.NumberFormat('en-IN').format(rupees) + '.' + cents;
+  } catch { return '—'; }
+}
+function cell(key,value) {
+  if (MONEY_FIELDS.has(key)) return moneyMilli(value);
+  if (PAISE_FIELDS.has(key)) return moneyPaise(value);
+  if (PAISE_FIELDS.has(key)) return moneyPaise(value);
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+export default function AdminPanel({ authUser }) {
+  const [token,setToken] = useState('');
+  const [admin,setAdmin] = useState(null);
+  const [tab,setTab] = useState('dashboard');
+  const [metrics,setMetrics] = useState(null);
+  const [rows,setRows] = useState([]);
+  const [busy,setBusy] = useState(false);
+  const [error,setError] = useState('');
+  const [notice,setNotice] = useState('');
+
+  useEffect(() => {
+    let live=true;
+    if (!authUser) { setToken(''); setAdmin(null); return; }
+    authUser.getIdToken(true).then(value=>{ if(live) setToken(value); })
+      .catch(()=>{ if(live) setError('Firebase session could not produce an ID token. Sign in again.'); });
+    return ()=>{live=false;};
+  },[authUser]);
+
+  const load = useCallback(async () => {
+    if(!token) return;
+    setBusy(true); setError('');
+    try {
+      const identity=await apiRequest('/v1/admin/auth',{accessToken:token});
+      setAdmin(identity.admin);
+      if(tab==='dashboard') {
+        const result=await apiRequest('/v1/admin/dashboard',{accessToken:token});
+        setMetrics(result.metrics||{});
+        setRows([]);
+      } else if(tab==='users') {
+        const result=await apiRequest('/v1/admin/users?limit=100&offset=0',{accessToken:token});
+        setRows(result.items||[]);
+      } else {
+        const result=await apiRequest((PATHS[tab]||PATHS.campaigns)+'?limit=100&offset=0',{accessToken:token});
+        setRows(result.items||[]);
+      }
+    } catch(e) {
+      setAdmin(null); setRows([]); setMetrics(null);
+      setError(e?.message||'Admin API request failed. Check admin UID, Firebase and API deployment.');
+    } finally { setBusy(false); }
+  },[token,tab]);
+  useEffect(()=>{load();},[load]);
+
+  const updateUser=async user=>{
+    if (user.firebase_uid === auth.currentUser?.uid) { setError('You cannot suspend your own admin account.'); return; }
+    const status=user.status==='suspended'?'active':'suspended';
+    setNotice('');
+    try {
+      await apiRequest('/v1/admin/users/'+encodeURIComponent(user.user_id),{
+        method:'PATCH',accessToken:token,body:{status}
+      });
+      setNotice(status==='suspended'?'User suspended; device ad-serving is blocked.':'User reactivated.');
+      await load();
+    } catch(e){setError(e?.message||'User status update failed.');}
+  };
+  const rewardAction=async (reward,action)=>{
+    try {
+      await apiRequest('/v1/admin/earnings/'+encodeURIComponent(reward.id),{method:'PATCH',accessToken:token,body:{action}});
+      setNotice('Reward '+action+' complete.'); await load();
+    } catch(e){setError(e?.message||'Reward review failed.');}
+  };
+  const payoutAction=async (payout,action)=>{
+    let utr_reference;
+    if(action==='mark_paid') {
+      utr_reference=window.prompt('Enter bank UTR / payment reference:');
+      if(!utr_reference||!utr_reference.trim()) return;
+    }
+    try {
+      await apiRequest('/v1/admin/payouts/'+encodeURIComponent(payout.id),{
+        method:'PATCH',accessToken:token,body:{action,...(utr_reference?{admin_note:utr_reference.trim()}:{})}
+      });
+      setNotice('Payout updated: '+action); await load();
+    } catch(e){setError(e?.message||'Payout review failed.');}
+  };
+
+  const columns=tab==='users'
+    ? ['serial_number','user_id','email','firebase_uid','status','devices_active','ads_served','ads_viewed','clicks_total','earned_total_milli_paise','earned_pending_milli_paise','earned_rejected_milli_paise']
+    : rows.length?Object.keys(rows[0]).filter(k=>!['before_data','after_data'].includes(k)).slice(0,12):[];
+
+  return <section className="admin-shell">
+    <header className="admin-heading"><div className="admin-title-icon"><ShieldCheck size={23}/></div><div><span className="admin-eyebrow">ADS+ CONTROL CENTER</span><h1>Admin panel</h1><p>{admin?admin.role+' administrator · '+(admin.email||admin.uid):'Validating Firebase identity and admin allowlist…'}</p></div><button className="admin-refresh" onClick={load} disabled={busy}><RefreshCw size={15}/>{busy?'Loading':'Refresh'}</button></header>
+    {!token&&<div className="admin-message"><AlertCircle size={18}/>Waiting for a signed-in Firebase account.</div>}
+    {error&&<div className="admin-message admin-error"><AlertCircle size={18}/>{error}</div>}
+    {notice&&<div className="admin-message admin-success"><CheckCircle2 size={18}/>{notice}</div>}
+    {admin&&<>
+      <nav className="admin-tabs">{TABS.map(([id,label])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}</nav>
+      {tab==='dashboard'&&<div className="admin-metric-grid">{[
+        ['Total users',metrics?.users_total,Users],['Active users',metrics?.users_active,CheckCircle2],
+        ['Suspended',metrics?.users_banned,Ban],['Verified impressions (24h)',metrics?.impressions_24h,BarChart3],
+        ['Revenue',metrics?.revenue_total_milli_paise,Wallet],['Platform share',metrics?.platform_share_total_milli_paise,Wallet],
+        ['Pending rewards',metrics?.rewards_pending_milli_paise,Wallet],['Pending payouts',metrics?.payouts_pending,Wallet]
+      ].map(([label,value,Icon])=><article className="admin-metric" key={label}><Icon size={17}/><span>{label}</span><strong>{MONEY_FIELDS.has(label==='Revenue'?'revenue_total_milli_paise':label==='Platform share'?'platform_share_total_milli_paise':label==='Pending rewards'?'rewards_pending_milli_paise':'')?moneyMilli(value):value??'—'}</strong></article>)}</div>}
+      {tab!=='dashboard'&&<div className="admin-table-wrap"><table className="admin-table"><thead><tr>{columns.map(k=><th key={k}>{k.replaceAll('_',' ')}</th>)}{tab==='users'&&<th>Account action</th>}{(tab==='payouts'||tab==='earnings')&&<th>Review</th>}</tr></thead><tbody>{rows.map((row,i)=><tr key={row.id||row.user_id||i}>{columns.map(k=><td key={k}>{cell(k,row[k])}</td>)}{tab==='users'&&<td><button className="admin-action" onClick={()=>updateUser(row)} disabled={row.status==='deleted'}>{row.status==='suspended'?'Unban':'Ban'}</button></td>}{tab==='earnings'&&<td className="admin-actions"><button onClick={()=>rewardAction(row,'approve')} disabled={row.status!=='requested'}>Approve</button><button onClick={()=>rewardAction(row,'reject')} disabled={row.status!=='requested'}>Reject</button></td>}{tab==='payouts'&&<td className="admin-actions"><button onClick={()=>payoutAction(row,'approve')} disabled={row.status!=='pending'}>Approve</button><button onClick={()=>payoutAction(row,'reject')} disabled={row.status!=='pending'}>Reject</button><button onClick={()=>payoutAction(row,'mark_paid')} disabled={row.status!=='approved'}>Mark paid</button></td>}</tr>)}</tbody></table>{!rows.length&&!busy&&<p className="admin-empty">No records returned for this section.</p>}</div>}
+    </>}
+  </section>;
+}

@@ -74,6 +74,6 @@ Until these services exist and are configured, the app should show no account ba
 
 ## Current Ads+ API (Firebase ID token)
 
-The account app now reads `GET /v1/me/earnings` and `GET /v1/me/history` with the Firebase ID token. All returned finance values ending in `_milli_paise` are milli-paise (₹1 = 100,000 milli-paise). The UI converts only for display; the server remains authoritative.
+The account app reads `GET /v1/me/earnings` and `GET /v1/me/earnings/history` with a Firebase ID token. `wallet_balance_paise` is the spendable wallet balance in integer paise. Reward-ledger fields ending in `_milli_paise` retain milli-paise precision (₹1 = 100,000 milli-paise); the UI converts only for display.
 
-Payout request: `POST /v1/payouts` with `{ "amount_paise": 2000, "upi_id": "name@upi" }`. Minimum request is ₹20; the server accepts only credited rewards after `available_at` (30-day hold) and reserves pending/approved/paid requests transactionally. A request is not proof of payment.
+Payout request: `POST /v1/payouts` with `{ "amount_paise": "2000", "upi_id": "name@upi" }` and an `Idempotency-Key` header. Minimum request is ₹20. The server locks the user and wallet, deducts the paise amount and writes a matching append-only spend transaction atomically. A requested payout reserves wallet funds; rejection refunds through a separate idempotent ledger transaction. A request is not proof of payment.

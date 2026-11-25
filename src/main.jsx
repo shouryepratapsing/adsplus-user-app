@@ -14,7 +14,7 @@ import './dark-mode.css';
 import { apiRequest, clearAccessToken, formatDateTime, formatINRFromPaise, getAccessToken, setAccessToken, readApiConfig } from './adsplus-api.js';
 import { getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, googleProvider } from './firebase.js';
-import AdminPanel from './admin.jsx';
+import AdminPanel from './AdminPanel.jsx';
 
 const NAV = [
   { id: 'home', label: 'Home', icon: Home },

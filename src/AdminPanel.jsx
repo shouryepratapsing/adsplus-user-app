@@ -11,7 +11,6 @@ const TABS = [
 const PATHS = { campaigns:'/v1/admin/campaigns', ads:'/v1/admin/ads', revenue:'/v1/admin/revenue',
   earnings:'/v1/admin/earnings', payouts:'/v1/admin/payouts', 'audit-log':'/v1/admin/audit-log' };
 const PAISE_FIELDS = new Set(['amount_paise','rate_paise','budget_paise','spent_paise']);
-const PAISE_FIELDS = new Set(['amount_paise','rate_paise','budget_paise','spent_paise']);
 const MONEY_FIELDS = new Set(['revenue_total_milli_paise','platform_share_total_milli_paise',
   'rewards_pending_milli_paise','earned_total_milli_paise','earned_pending_milli_paise',
   'earned_rejected_milli_paise','amount_milli_paise','revenue_milli_paise','platform_milli_paise']);
@@ -34,18 +33,8 @@ function moneyPaise(value) {
     return '₹' + new Intl.NumberFormat('en-IN').format(rupees) + '.' + cents;
   } catch { return '—'; }
 }
-function moneyPaise(value) {
-  if (value === null || value === undefined || value === '') return '—';
-  try {
-    const paise = BigInt(value);
-    const rupees = paise / 100n;
-    const cents = String(paise % 100n).padStart(2,'0');
-    return '₹' + new Intl.NumberFormat('en-IN').format(rupees) + '.' + cents;
-  } catch { return '—'; }
-}
 function cell(key,value) {
   if (MONEY_FIELDS.has(key)) return moneyMilli(value);
-  if (PAISE_FIELDS.has(key)) return moneyPaise(value);
   if (PAISE_FIELDS.has(key)) return moneyPaise(value);
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'object') return JSON.stringify(value);

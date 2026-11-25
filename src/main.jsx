@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import AdminPanel from './AdminPanel.jsx';
 
 import { createRoot } from 'react-dom/client';
 import {
@@ -327,4 +328,4 @@ function HelpPage({ notify }) { const [openFaq, setOpenFaq] = useState(0); const
   ['How will creator codes work?', 'The dashboard submits the code to the backend. The server must validate the active code, record its creator, and preserve historical attribution.'],
 ]; return <><PageHeading eyebrow="ADS+ SUPPORT" title="Help centre" subtitle="Clear information about account setup, rewards and withdrawals." /><section className="help-hero"><div className="help-orb large"><Headphones size={25} /></div><div><div className="eyebrow">ADS+ SUPPORT</div><h2>We’ll keep it clear.</h2><p>Connect services before using account features.</p></div><button className="secondary-button" onClick={() => notify('Support inbox needs to be configured.') }><MessageCircle size={15} /> Contact support</button></section><section className="section-card faq-card"><div className="section-header"><div><h2>Frequently asked questions</h2><p>Tap a question to read the answer.</p></div><CircleHelp size={19} /></div>{faqs.map(([q,a],i)=><div className={`faq-item ${openFaq===i?'faq-open':''}`} key={q}><button onClick={() => setOpenFaq(openFaq===i?-1:i)} aria-expanded={openFaq===i}><span>{q}</span><span className="faq-toggle">{openFaq===i?<X size={15}/>:<Plus size={15}/>}</span></button>{openFaq===i&&<p>{a}</p>}</div>)}</section><section className="section-card support-info-grid"><div><ShieldCheck size={19}/><strong>Safety first</strong><p>Never share a banking PIN, UPI PIN or password with support.</p></div><div><Smartphone size={19}/><strong>Built for mobile</strong><p>The interface adapts to small screens and desktop layouts.</p></div><div><CircleAlert size={19}/><strong>Setup status</strong><p>Authentication, extension sync and payouts still need to be configured.</p></div></section></>; }
 
-createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
+createRoot(document.getElementById('root')).render(<React.StrictMode>{window.location.pathname.replace(/\\/+$/, '') === '/admin' ? <AdminPanel /> : <App />}</React.StrictMode>);

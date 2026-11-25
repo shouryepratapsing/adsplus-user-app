@@ -71,3 +71,9 @@ The server must recheck balance, minimum/maximum limits, account state, fraud ru
 - Configure email delivery, token expiry/revocation, rate limits, admin controls and an actual payout provider before enabling real withdrawals.
 
 Until these services exist and are configured, the app should show no account balance, keep withdrawals unavailable, and not claim that earnings are active.
+
+## Current Ads+ API (Firebase ID token)
+
+The account app now reads `GET /v1/me/earnings` and `GET /v1/me/history` with the Firebase ID token. All returned finance values ending in `_milli_paise` are milli-paise (₹1 = 100,000 milli-paise). The UI converts only for display; the server remains authoritative.
+
+Payout request: `POST /v1/payouts` with `{ "amount_paise": 2000, "upi_id": "name@upi" }`. Minimum request is ₹20; the server accepts only credited rewards after `available_at` (30-day hold) and reserves pending/approved/paid requests transactionally. A request is not proof of payment.

@@ -166,7 +166,7 @@ function App() {
 
   const requestWithdrawal = async ({ amount, upiId }) => {
     const amountText = String(amount ?? '').trim();
-    if (!/^\\d+(?:\\.\\d{1,2})?$/.test(amountText)) throw new Error('Enter an amount with up to 2 decimal places.');
+    if (!/^\d+(?:\.\d{1,2})?$/.test(amountText)) throw new Error('Enter an amount with up to 2 decimal places.');
     const [whole, fraction = ''] = amountText.split('.');
     const paise = BigInt(whole) * 100n + BigInt(fraction.padEnd(2,'0'));
     if (paise < 2000n) throw new Error('Minimum payout is ₹20.');

@@ -16,6 +16,14 @@ import { getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, signOut as 
 import { auth, googleProvider } from './firebase.js';
 import AdminPanel from './AdminPanel.jsx';
 
+// Render build-time allowlist: the private dashboard must fail closed if unset.
+const OWNER_EMAIL = String(import.meta.env.VITE_OWNER_EMAIL || '').trim().toLowerCase();
+const CANONICAL_HOST = 'app.adsplusprof.me';
+if (window.location.hostname === 'adsplus-user-app-staging.onrender.com' &&
+    window.location.search.includes('canonical=1')) {
+  window.location.replace('https://' + CANONICAL_HOST + window.location.pathname + window.location.search.replace(/[?&]canonical=1/, '') + window.location.hash);
+}
+
 const NAV = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'earnings', label: 'Earnings', icon: ChartNoAxesCombined },
@@ -55,6 +63,16 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const email = String(user?.email || '').trim().toLowerCase();
+      if (user && (!OWNER_EMAIL || email !== OWNER_EMAIL)) {
+        clearAccessToken();
+        firebaseSignOut(auth).catch(() => {});
+        setAuthUser(null);
+        setDashboard(null);
+        setBackendState({ status: 'owner_only', message: 'This Ads+ private app is restricted to its owner account.' });
+        setAuthLoading(false);
+        return;
+      }
       setAuthUser(user);
       if (user) user.getIdToken(true).then((token) => { setAccessToken(token); refreshData(); }).catch((error) => console.error('Firebase token refresh failed:', error));
       else clearAccessToken();
@@ -188,6 +206,9 @@ function App() {
     refreshData();
     return result;
   };
+
+  if (authLoading) return <div className="owner-lock-screen"><div className="owner-lock-card"><LockKeyhole size={26}/><h1>Ads+ Private</h1><p>Checking owner access…</p></div></div>;
+  if (!authUser) return <div className="owner-lock-screen"><div className="owner-lock-card"><img src="/logo-black.png" alt="Ads+"/><h1>Ads+ Private App</h1><p>Only the owner Google account can access this app.</p><button className="google-signin-button" onClick={connectAccount}>Continue with owner Google account</button><small>Unauthorized accounts are signed out automatically.</small></div></div>;
 
   const profile = dashboard?.user || dashboard?.profile || {};
   const navItems = authUser ? [...NAV, { id: 'admin', label: 'Admin panel', icon: ShieldCheck }] : NAV;

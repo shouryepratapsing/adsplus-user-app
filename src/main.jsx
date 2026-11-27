@@ -176,11 +176,21 @@ function App() {
     const paise = BigInt(whole) * 100n + BigInt(fraction.padEnd(2,'0'));
     if (paise < 2000n) throw new Error('Minimum payout is ₹20.');
     if (!upiId || !upiId.trim()) throw new Error('Enter the payout destination requested by Ads+.');
-    const result = await apiRequest('/v1/payouts', {
-      method: 'POST',
-      body: { amount_paise: paise.toString(), upi_id: upiId.trim() },
-      headers: { 'Idempotency-Key': payoutIdempotencyKey },
-    });
+    let result;
+    try {
+      result = await apiRequest('/v1/payouts', {
+        method: 'POST',
+        body: { amount_paise: paise.toString(), upi_id: upiId.trim() },
+        headers: { 'Idempotency-Key': payoutIdempotencyKey },
+      });
+    } catch (error) {
+      // Definitive 4xx rejection: rotate for the next corrected request.
+      // Network/5xx errors remain ambiguous, so retain the key for retry.
+      if (Number.isInteger(error.status) && error.status < 500) {
+        setPayoutIdempotencyKey(window.crypto.randomUUID());
+      }
+      throw error;
+    }
     setPayoutIdempotencyKey(window.crypto.randomUUID());
     refreshData();
     return result;

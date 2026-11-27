@@ -53,7 +53,10 @@ export async function apiRequest(path, { method = 'GET', body, signal, accessTok
   if (!response.ok) {
     if (response.status === 401) clearAccessToken();
     const message = payload?.message || payload?.error || `Ads+ service returned ${response.status}`;
-    throw new Error(String(message));
+    const error = new Error(String(message));
+    error.status = response.status;
+    error.code = payload?.error || null;
+    throw error;
   }
   return payload;
 }

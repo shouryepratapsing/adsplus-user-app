@@ -612,3 +612,9 @@ h1, h2, h3, p { margin-top: 0; }
 .refer-section-count:empty {
   display: none !important;
 }
+
+
+/* Owner-only entry screen */
+.owner-lock-screen{min-height:100dvh;display:grid;place-items:center;padding:24px;background:var(--page-bg,#f7f5f1);color:var(--text,#241c17)}
+.owner-lock-card{width:min(100%,420px);display:flex;flex-direction:column;align-items:center;gap:14px;padding:34px 26px;border:1px solid var(--border,#e4ddd5);border-radius:24px;background:var(--card,#fff);box-shadow:0 18px 60px rgba(36,28,23,.08);text-align:center}
+.owner-lock-card img{width:54px;height:54px;object-fit:contain}.owner-lock-card h1{margin:0;font-size:26px}.owner-lock-card p,.owner-lock-card small{margin:0;color:var(--muted,#7a7068);line-height:1.6}.owner-lock-card .google-signin-button{width:100%;justify-content:center}

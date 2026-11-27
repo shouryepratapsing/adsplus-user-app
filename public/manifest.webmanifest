@@ -1,12 +1,17 @@
 {
-  "name": "Ads+ Rewards",
+  "name": "Ads+ Private Account",
   "short_name": "Ads+",
-  "description": "Ads+ rewards and account dashboard",
+  "description": "Private owner-only Ads+ account app",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7f5f1",
   "theme_color": "#6f4e37",
   "icons": [
-    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }

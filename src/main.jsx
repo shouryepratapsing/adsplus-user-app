@@ -20,7 +20,6 @@ const NAV = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'earnings', label: 'Earnings', icon: ChartNoAxesCombined },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
-  { id: 'coupons', label: 'Refer & Earn', icon: BadgePercent },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ];
 
@@ -31,6 +30,7 @@ function App() {
   const [toast, setToast] = useState('');
   const [dashboard, setDashboard] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [payoutIdempotencyKey, setPayoutIdempotencyKey] = useState(() => window.crypto.randomUUID());
   const [backendState, setBackendState] = useState({ status: 'checking', message: 'Checking Ads+ account services.' });
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -90,9 +90,10 @@ function App() {
         return;
       }
       try {
-        const [earnings, history] = await Promise.all([
+        const [earnings, history, payoutResponse] = await Promise.all([
           apiRequest('/v1/me/earnings', { accessToken: token }),
-          apiRequest('/v1/me/earnings/history?limit=50&offset=0', { accessToken: token })
+          apiRequest('/v1/me/earnings/history?limit=50&offset=0', { accessToken: token }),
+          apiRequest('/v1/payouts?limit=50&offset=0', { accessToken: token })
         ]);
         if (!active) return;
         const toPaise = (milli) => { try { return (BigInt(milli || 0) / 1000n).toString(); } catch { return '0'; } };
@@ -106,13 +107,17 @@ function App() {
         setDashboard({
           user: { id: authUser?.uid || '', email: authUser?.email || '', display_name: authUser?.displayName || '' },
           wallet: {
-            available_paise: earnings.wallet_balance_paise || '0',
+            available_paise: earnings.wallet_balance_paise ?? toPaise(earnings.wallet_balance_milli_paise),
             pending_paise: toPaise(earnings.pending_rewards_milli_paise),
             total_earned_paise: toPaise(earnings.credited_rewards_milli_paise)
           },
           metrics: {}, services: { payout_enabled: true, extension_connected: false, reward_modes: {} },
           recent_activity: entries.slice(0, 8), reward_ledger: entries.filter(item => item.type === 'reward'),
-          withdrawals: payoutItems, earnings
+          withdrawals: (payoutResponse.items || []).map(item => ({
+            id: item.id, type: 'payout', label: 'Payout request',
+            description: 'Payout request', created_at: item.created_at,
+            status: item.status, amount_paise: item.amount_paise
+          })), earnings
         });
         setBackendState({ status: 'connected', message: 'Account connected. Wallet balance is paise; reward history retains milli-paise audit precision.' });
       } catch (error) {
@@ -174,7 +179,9 @@ function App() {
     const result = await apiRequest('/v1/payouts', {
       method: 'POST',
       body: { amount_paise: paise.toString(), upi_id: upiId.trim() },
+      headers: { 'Idempotency-Key': payoutIdempotencyKey },
     });
+    setPayoutIdempotencyKey(window.crypto.randomUUID());
     refreshData();
     return result;
   };
@@ -211,7 +218,7 @@ function App() {
       </main>
       <footer className="page-footer"><span>© 2026 Ads+</span><span className="footer-dot">·</span><button onClick={() => navigate('help')}>Help centre</button><span className="footer-spacer" /><span className="footer-lock"><LockKeyhole size={12} /> {backendState.status === 'connected' ? 'Live account connected' : 'Live account not connected'}</span></footer>
     </div>
-    <nav className="mobile-tabbar" aria-label="Mobile navigation">{NAV.map((item) => { const Icon = item.icon; return <button key={item.id} className={page === item.id ? 'current' : ''} onClick={() => navigate(item.id)}><Icon size={19} /><span>{item.id === 'coupons' ? 'Codes' : item.label}</span></button>; })}</nav>
+    <nav className="mobile-tabbar" aria-label="Mobile navigation">{NAV.map((item) => { const Icon = item.icon; return <button key={item.id} className={page === item.id ? 'current' : ''} onClick={() => navigate(item.id)}><Icon size={19} /><span>{item.label}</span></button>; })}</nav>
     {toast && <div className="toast" role="status"><CheckCircle2 size={17} />{toast}</div>}
   </div>;
 }

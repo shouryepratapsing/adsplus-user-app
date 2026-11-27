@@ -27,10 +27,10 @@ export function clearAccessToken() {
   try { window.dispatchEvent(new Event('adsplus:logged-out')); } catch { /* event support may be unavailable */ }
 }
 
-export async function apiRequest(path, { method = 'GET', body, signal, accessToken } = {}) {
+export async function apiRequest(path, { method = 'GET', body, signal, accessToken, headers: extraHeaders = {} } = {}) {
   const { apiBaseUrl } = await readApiConfig();
   if (!apiBaseUrl) throw new Error('Backend URL is not set. Configure public/adsplus-config.json first.');
-  const headers = { Accept: 'application/json' };
+  const headers = { Accept: 'application/json', ...extraHeaders };
   const token = accessToken || getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';

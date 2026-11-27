@@ -3,6 +3,15 @@ let cachedConfig;
 
 export async function readApiConfig(force = false) {
   if (cachedConfig && !force) return cachedConfig;
+
+  // Build-time API origin for staging/production. This is public configuration,
+  // not a place for credentials or secrets.
+  const buildApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  if (buildApiBaseUrl) {
+    cachedConfig = { apiBaseUrl: buildApiBaseUrl };
+    return cachedConfig;
+  }
+
   try {
     const response = await fetch(`/adsplus-config.json${force ? `?t=${Date.now()}` : ''}`, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Config request failed (${response.status})`);

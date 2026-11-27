@@ -1,0 +1,44 @@
+name: Ads+ User App release checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "feature/user-app-api-contract-fix-20261127"]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verify API contract and release boundaries
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const app = fs.readFileSync('src/main.jsx', 'utf8');
+          const api = fs.readFileSync('src/adsplus-api.js', 'utf8');
+          const contract = fs.readFileSync('API-CONTRACT.md', 'utf8');
+          const config = JSON.parse(fs.readFileSync('public/adsplus-config.json', 'utf8'));
+          const checks = [
+            ['wallet milli-paise conversion', /wallet_balance_milli_paise/.test(app)],
+            ['payout list endpoint', /\/v1\/payouts\?limit=50/.test(app)],
+            ['payout idempotency key', /Idempotency-Key/.test(app) && /headers: extraHeaders/.test(api)],
+            ['Firebase bearer auth header', api.includes('headers.Authorization') && api.includes('Bearer')],
+            ['creator/referral navigation removed', !/id: 'coupons'/.test(app)],
+            ['production API origin not prematurely configured', config.apiBaseUrl === ''],
+            ['API contract documents manual payout', /manual UPI payout/.test(contract)]
+          ];
+          for (const [name, pass] of checks) {
+            console.log((pass ? 'PASS ' : 'FAIL ') + name);
+            if (!pass) process.exitCode = 1;
+          }
+          NODE

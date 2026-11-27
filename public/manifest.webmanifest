@@ -1,7 +1,7 @@
 {
   "name": "Ads+ Rewards",
   "short_name": "Ads+",
-  "description": "Ads+ rewards dashboard prototype",
+  "description": "Ads+ rewards and account dashboard",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7f5f1",

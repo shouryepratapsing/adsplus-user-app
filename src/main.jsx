@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Activity, Moon, Sun, ArrowRight, ArrowUpRight, CheckCircle2,
-  ChevronRight, CircleAlert, CircleHelp, Clock3, CreditCard, Eye,
+  ChevronRight, CircleAlert, CircleHelp, Clock3, CreditCard, Eye, EyeOff,
   Headphones, Home, LockKeyhole, LogOut,
   Menu, MessageCircle, Plus, Settings2, ShieldCheck, Wallet, X, UserRound, ChartNoAxesCombined, Mail
 } from 'lucide-react';
@@ -31,6 +31,7 @@ const NAV = [
 function App() {
   const [page, setPage] = useState('home');
   const [darkMode, setDarkMode] = useState(() => { try { return window.localStorage.getItem('adsplus.theme') === 'dark'; } catch { return false; } });
+  const [showBalances, setShowBalances] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [dashboard, setDashboard] = useState(null);
@@ -219,9 +220,9 @@ function App() {
     <div className="main-column">
       <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-quiet" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'}>{menuOpen ? <X size={21} /> : <Menu size={21} />}</button><div className="breadcrumb"><strong>{pageLabel(page)}</strong></div></div><div className="topbar-actions"><button type="button" className={`theme-toggle ${darkMode ? 'is-dark' : 'is-light'}`} role="switch" aria-checked={darkMode} aria-label={darkMode ? 'Turn dark mode off' : 'Turn dark mode on'} title={darkMode ? 'Dark mode: on' : 'Dark mode: off'} onClick={() => setDarkMode((value) => !value)}><span className="theme-toggle-icon">{darkMode ? <Sun size={17} /> : <Moon size={17} />}</span><span className="theme-toggle-label">Dark mode</span><span className="theme-switch-track"><span className="theme-switch-thumb" /></span></button><button className="notification-btn icon-quiet" aria-label="Refresh account information" onClick={refreshData}><Activity size={18} /></button><button className="top-avatar" onClick={() => navigate('profile')} aria-label="Your profile">{String(profile.display_name || profile.name || 'A').slice(0,1).toUpperCase()}</button></div></header>
       <main className="page-content">
-        {page === 'home' && <HomePage navigate={navigate} dashboard={dashboard} backendState={backendState} />}
+        {page === 'home' && <HomePage navigate={navigate} dashboard={dashboard} backendState={backendState} showBalances={showBalances} setShowBalances={setShowBalances} />}
         {page === 'earnings' && <EarningsPage navigate={navigate} dashboard={dashboard} backendState={backendState} />}
-        {page === 'wallet' && <WalletPage notify={notify} dashboard={dashboard} backendState={backendState} onWithdraw={requestWithdrawal} />}
+        {page === 'wallet' && <WalletPage notify={notify} dashboard={dashboard} backendState={backendState} onWithdraw={requestWithdrawal} showBalances={showBalances} setShowBalances={setShowBalances} />}
         {page === 'profile' && <ProfilePage navigate={navigate} notify={notify} dashboard={dashboard} backendState={backendState} authUser={authUser} authLoading={authLoading} onConnect={connectAccount} onSignOut={signOut} />}
         {page === 'help' && <HelpPage notify={notify} />}
       </main>
@@ -247,7 +248,7 @@ function ActivityList({ items, emptyTitle }) {
 }
 function countLabel(value) { return value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : new Intl.NumberFormat('en-IN').format(Number(value)); }
 
-function HomePage({ navigate, dashboard, backendState }) {
+function HomePage({ navigate, dashboard, backendState, showBalances, setShowBalances }) {
   const connected = backendState.status === 'connected' && Boolean(dashboard);
   const wallet = dashboard?.wallet || {};
   const activity = Array.isArray(dashboard?.recent_activity) ? dashboard.recent_activity : [];
@@ -258,13 +259,13 @@ function HomePage({ navigate, dashboard, backendState }) {
       action={<span className="profile-status"><span className={`status-point ${connected ? 'status-point-on' : ''}`} /> {connected ? 'Account connected' : backendState.status === 'error' ? 'Connection error' : 'Sign in required'}</span>}
     />
     <section className="wallet-hero">
-      <div className="wallet-hero-top"><span className="hero-kicker"><Wallet size={15} /> AVAILABLE BALANCE</span><Eye size={17} /></div>
-      <div className="hero-amount">{formatINRFromPaise(connected ? wallet.available_paise : undefined)}</div>
+      <div className="wallet-hero-top"><span className="hero-kicker"><Wallet size={15} /> AVAILABLE BALANCE</span><button type="button" className="balance-visibility-toggle hero-eye" onClick={() => setShowBalances(value => !value)} aria-label={showBalances ? 'Hide balances' : 'Show balances'} aria-pressed={!showBalances} title={showBalances ? 'Hide balances' : 'Show balances'}>{showBalances ? <Eye size={17} /> : <EyeOff size={17} />}</button></div>
+      <div className="hero-amount">{showBalances ? formatINRFromPaise(connected ? wallet.available_paise : undefined) : '••••••'}</div>
       <div className="hero-under">{connected ? 'Available balance' : 'Sign in to view your available balance'}</div>
       <div className="hero-rule" />
       <div className="hero-bottom">
-        <div><small>Total earned</small><strong>{formatINRFromPaise(connected ? wallet.total_earned_paise : undefined)}</strong></div>
-        <div><small>Pending rewards</small><strong>{formatINRFromPaise(connected ? wallet.pending_paise : undefined)}</strong></div>
+        <div><small>Total earned</small><strong>{showBalances ? formatINRFromPaise(connected ? wallet.total_earned_paise : undefined) : '••••••'}</strong></div>
+        <div><small>Pending rewards</small><strong>{showBalances ? formatINRFromPaise(connected ? wallet.pending_paise : undefined) : '••••••'}</strong></div>
         <button className="hero-button" onClick={() => navigate('wallet')}>Wallet <ArrowUpRight size={16} /></button>
       </div>
       <div className="hero-glow hero-glow-one" /><div className="hero-glow hero-glow-two" />
@@ -292,7 +293,7 @@ function EarningsPage({ navigate, dashboard, backendState }) {
 
 function SummaryCard({ label, value, note, icon: Icon, tone }) { return <section className="summary-card"><div className={`summary-icon ${tone}`}><Icon size={18} /></div><span className="summary-label">{label}</span><strong className="summary-value">{value}</strong><p>{note}</p></section>; }
 
-function WalletPage({ notify, dashboard, backendState, onWithdraw }) {
+function WalletPage({ notify, dashboard, backendState, onWithdraw, showBalances, setShowBalances }) {
   const [amount, setAmount] = useState('');
   const [upiId, setUpiId] = useState('');
   const [sending, setSending] = useState(false);
@@ -312,7 +313,7 @@ function WalletPage({ notify, dashboard, backendState, onWithdraw }) {
       notify(error?.message || 'Withdrawal request failed.');
     } finally { setSending(false); }
   };
-  return <><PageHeading title="Wallet" subtitle={connected ? 'Your balance and payout history.' : 'Sign in to view your balance and request a payout.'} /><section className="wallet-page-grid"><section className="wallet-main-card"><div className="wallet-main-top"><span><Wallet size={16} /> AVAILABLE BALANCE</span><LockKeyhole size={16} /></div><strong>{formatINRFromPaise(connected ? wallet.available_paise : undefined)}</strong><p>{connected ? 'Your Ads+ balance' : 'Sign in to view your balance.'}</p><div className="wallet-mini-stats"><div><small>Pending rewards</small><b>{formatINRFromPaise(connected ? wallet.pending_paise : undefined)}</b></div><div><small>Total earned</small><b>{formatINRFromPaise(connected ? wallet.total_earned_paise : undefined)}</b></div></div></section><section className="section-card withdraw-card"><div className="section-header"><div><h2>Withdraw funds</h2><p>{payoutEnabled ? 'Submit a payout request.' : 'Payouts are not available yet.'}</p></div><span className="small-icon"><ArrowUpRight size={18} /></span></div><div className="warning-callout"><CircleAlert size={17} /><p><strong>{payoutEnabled ? 'Verification required.' : 'Not available yet.'}</strong> {payoutEnabled ? 'Ads+ checks your available balance and payout eligibility before accepting your request.' : 'Payouts will be available once this feature is enabled.'}</p></div><form className="withdraw-form" onSubmit={submit}><label htmlFor="withdraw-amount">Amount (INR)</label><div className="amount-input-wrap"><span>₹</span><input id="withdraw-amount" type="number" inputMode="decimal" min="20" step="0.01" placeholder="Enter amount" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!payoutEnabled || sending} required /></div><label htmlFor="withdraw-upi">UPI ID / payout destination</label><input id="withdraw-upi" type="text" autoComplete="off" placeholder="Enter your approved payout ID" value={upiId} onChange={(event) => setUpiId(event.target.value)} disabled={!payoutEnabled || sending} required /><p className="field-helper">Ads+ will verify your payout details before processing the payment.</p><button className="primary-button form-submit" type="submit" disabled={!payoutEnabled || sending}>{sending ? 'Submitting…' : payoutEnabled ? 'Request withdrawal' : 'Withdrawals unavailable'} <LockKeyhole size={15} /></button></form></section></section><section className="section-card payment-explainer"><div className="explainer-icon"><ShieldCheck size={19} /></div><div><h2>Secure payout process</h2><p>Ads+ verifies your balance and payout status to keep your account accurate and secure. Never share your UPI PIN or banking password.</p></div></section><section className="section-card"><div className="section-header"><div><h2>Withdrawal activity</h2><p>Your recent withdrawal requests.</p></div></div><ActivityList items={connected ? withdrawals : []} emptyTitle="No withdrawals yet" /></section></>;
+  return <><PageHeading title="Wallet" subtitle={connected ? 'Your balance and payout history.' : 'Sign in to view your balance and request a payout.'} /><section className="wallet-page-grid"><section className="wallet-main-card"><div className="wallet-main-top"><span><Wallet size={16} /> AVAILABLE BALANCE</span><button type="button" className="balance-visibility-toggle wallet-balance-eye" onClick={() => setShowBalances(value => !value)} aria-label={showBalances ? 'Hide balances' : 'Show balances'} aria-pressed={!showBalances} title={showBalances ? 'Hide balances' : 'Show balances'}>{showBalances ? <Eye size={17} /> : <EyeOff size={17} />}</button></div><strong>{showBalances ? formatINRFromPaise(connected ? wallet.available_paise : undefined) : '••••••'}</strong><p>{connected ? 'Your Ads+ balance' : 'Sign in to view your balance.'}</p><div className="wallet-mini-stats"><div><small>Pending rewards</small><b>{showBalances ? formatINRFromPaise(connected ? wallet.pending_paise : undefined) : '••••••'}</b></div><div><small>Total earned</small><b>{showBalances ? formatINRFromPaise(connected ? wallet.total_earned_paise : undefined) : '••••••'}</b></div></div></section><section className="section-card withdraw-card"><div className="section-header"><div><h2>Withdraw funds</h2><p>{payoutEnabled ? 'Submit a payout request.' : 'Payouts are not available yet.'}</p></div><span className="small-icon"><ArrowUpRight size={18} /></span></div><div className="warning-callout"><CircleAlert size={17} /><p><strong>{payoutEnabled ? 'Verification required.' : 'Not available yet.'}</strong> {payoutEnabled ? 'Ads+ checks your available balance and payout eligibility before accepting your request.' : 'Payouts will be available once this feature is enabled.'}</p></div><form className="withdraw-form" onSubmit={submit}><label htmlFor="withdraw-amount">Amount (INR)</label><div className="amount-input-wrap"><span>₹</span><input id="withdraw-amount" type="number" inputMode="decimal" min="20" step="0.01" placeholder="Enter amount" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={!payoutEnabled || sending} required /></div><label htmlFor="withdraw-upi">UPI ID / payout destination</label><input id="withdraw-upi" type="text" autoComplete="off" placeholder="Enter your approved payout ID" value={upiId} onChange={(event) => setUpiId(event.target.value)} disabled={!payoutEnabled || sending} required /><p className="field-helper">Ads+ will verify your payout details before processing the payment.</p><button className="primary-button form-submit" type="submit" disabled={!payoutEnabled || sending}>{sending ? 'Submitting…' : payoutEnabled ? 'Request withdrawal' : 'Withdrawals unavailable'} <LockKeyhole size={15} /></button></form></section></section><section className="section-card payment-explainer"><div className="explainer-icon"><ShieldCheck size={19} /></div><div><h2>Secure payout process</h2><p>Ads+ verifies your balance and payout status to keep your account accurate and secure. Never share your UPI PIN or banking password.</p></div></section><section className="section-card"><div className="section-header"><div><h2>Withdrawal activity</h2><p>Your recent withdrawal requests.</p></div></div><ActivityList items={connected ? withdrawals : []} emptyTitle="No withdrawals yet" /></section></>;
 }
 
 function ProfilePage({ navigate, notify, dashboard, backendState, authUser, authLoading, onConnect, onSignOut }) {

@@ -36,7 +36,7 @@ function App() {
   const [dashboard, setDashboard] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [payoutIdempotencyKey, setPayoutIdempotencyKey] = useState(() => window.crypto.randomUUID());
-  const [backendState, setBackendState] = useState({ status: 'checking', message: 'Checking Ads+ account services.' });
+  const [backendState, setBackendState] = useState({ status: 'checking', message: 'Checking your Ads+ account…' });
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 

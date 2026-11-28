@@ -38,7 +38,7 @@ export function clearAccessToken() {
 
 export async function apiRequest(path, { method = 'GET', body, signal, accessToken, headers: extraHeaders = {} } = {}) {
   const { apiBaseUrl } = await readApiConfig();
-  if (!apiBaseUrl) throw new Error('Backend URL is not set. Configure public/adsplus-config.json first.');
+  if (!apiBaseUrl) throw new Error('Ads+ account services are temporarily unavailable. Please try again later.');
   const headers = { Accept: 'application/json', ...extraHeaders };
   const token = accessToken || getAccessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -54,7 +54,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, accessTok
       credentials: 'omit',
     });
   } catch {
-    throw new Error('Ads+ backend could not be reached. Check the server URL, internet and CORS settings.');
+    throw new Error('Couldn't connect to Ads+. Check your internet connection and try again.');
   }
   const raw = await response.text();
   let payload = {};
@@ -80,7 +80,7 @@ export async function verifyEmailSignIn(email, code) {
     body: { email, code },
   });
   const token = result?.access_token || result?.accessToken || result?.token;
-  if (!token) throw new Error('The server did not return an access token. Check the email-login API contract.');
+  if (!token) throw new Error('Sign-in could not be completed. Please try again.');
   try { window.localStorage.setItem(TOKEN_KEY, token); } catch {
     throw new Error('This browser could not save your sign-in session.');
   }

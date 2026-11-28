@@ -28,6 +28,26 @@ const NAV = [
   { id: 'profile', label: 'Profile', icon: UserRound },
 ];
 
+function readExtensionConnectRequest() {
+  const prefix = '#adsplus-extension-connect?';
+  const hash = window.location.hash || '';
+  if (!hash.startsWith(prefix)) return null;
+
+  const params = new URLSearchParams(hash.slice(prefix.length));
+  const deviceId = params.get('device_id') || '';
+  const installSecret = params.get('install_secret') || '';
+
+  // Remove the one-time handoff secret from the address bar immediately.
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+
+  if (!/^[a-z0-9][a-z0-9._:-]{7,127}$/i.test(deviceId) ||
+      !/^[A-Za-z0-9_-]{32,128}$/.test(installSecret)) {
+    return { mode: true, status: 'error', message: 'This extension connection link is invalid. Return to the extension and try again.' };
+  }
+
+  return { mode: true, status: 'pending', device_id: deviceId, install_secret: installSecret };
+}
+
 function App() {
   const [page, setPage] = useState('home');
   const [darkMode, setDarkMode] = useState(() => { try { return window.localStorage.getItem('adsplus.theme') === 'dark'; } catch { return false; } });
@@ -40,6 +60,7 @@ function App() {
   const [backendState, setBackendState] = useState({ status: 'checking', message: 'Checking your Ads+ account…' });
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [extensionConnect, setExtensionConnect] = useState(() => readExtensionConnectRequest() || { mode: false, status: 'idle' });
 
   const notify = (message) => {
     setToast(message);
@@ -71,6 +92,49 @@ function App() {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!extensionConnect.mode ||
+        extensionConnect.status !== 'pending' ||
+        !authUser ||
+        authLoading) return;
+
+    let active = true;
+    setExtensionConnect((current) => ({ ...current, status: 'linking' }));
+
+    (async () => {
+      try {
+        const token = await authUser.getIdToken(true);
+        const result = await apiRequest('/v1/devices/link', {
+          method: 'POST',
+          body: {
+            device_id: extensionConnect.device_id,
+            install_secret: extensionConnect.install_secret
+          },
+          accessToken: token
+        });
+        if (!result?.linked) throw new Error('The extension could not be linked. Please try again.');
+        if (active) setExtensionConnect({ mode: true, status: 'connected' });
+      } catch (error) {
+        if (active) {
+          setExtensionConnect((current) => ({
+            ...current,
+            status: 'error',
+            message: error?.message || 'Could not connect the extension. Please try again.'
+          }));
+        }
+      }
+    })();
+
+    return () => { active = false; };
+  }, [
+    extensionConnect.mode,
+    extensionConnect.status,
+    extensionConnect.device_id,
+    extensionConnect.install_secret,
+    authUser,
+    authLoading
+  ]);
 
   useEffect(() => {
     const theme = darkMode ? 'dark' : 'light';
@@ -196,6 +260,39 @@ function App() {
   };
 
   if (authLoading) return <div className="owner-lock-screen"><div className="owner-lock-card"><LockKeyhole size={26}/><h1>Ads+</h1><p>Checking your Google sign-in…</p></div></div>;
+
+  if (extensionConnect.mode) {
+    const title = extensionConnect.status === 'connected'
+      ? 'Extension connected'
+      : extensionConnect.status === 'linking'
+        ? 'Connecting this PC'
+        : 'Connect your Ads+ Extension';
+    let message = 'Sign in with the same Google account you use in the Ads+ app on your phone.';
+    if (extensionConnect.status === 'connected') {
+      message = 'This browser extension is now linked to ' + (authUser?.email || 'your Ads+ account') + '. Verified rewards will sync to the same account you use on your phone.';
+    } else if (extensionConnect.status === 'linking') {
+      message = 'Securely linking this extension to your signed-in Google account…';
+    } else if (extensionConnect.status === 'error') {
+      message = extensionConnect.message || 'The connection could not be completed. Please try again.';
+    }
+
+    return <div className="owner-lock-screen"><div className="owner-lock-card">
+      <img src="/logo-black.png" alt="Ads+" />
+      <h1>{title}</h1>
+      <p>{message}</p>
+      {extensionConnect.status === 'connected' ? (
+        <button className="google-signin-button" onClick={() => window.close()}>Done</button>
+      ) : extensionConnect.status === 'linking' ? (
+        <small>Keep this page open until the connection finishes.</small>
+      ) : !authUser ? (
+        <button className="google-signin-button" onClick={connectAccount}>Continue with Google</button>
+      ) : extensionConnect.status === 'error' && extensionConnect.install_secret ? (
+        <button className="google-signin-button" onClick={() => setExtensionConnect((current) => ({ ...current, status: 'pending', message: '' }))}>Try again</button>
+      ) : null}
+      <button className="extension-connect-cancel" onClick={() => setExtensionConnect({ mode: false, status: 'idle' })}>Cancel</button>
+    </div></div>;
+  }
+
   if (!authUser) return <div className="owner-lock-screen"><div className="owner-lock-card"><img src="/logo-black.png" alt="Ads+"/><h1>Welcome to Ads+</h1><p>Sign in with Google to access your Ads+ account.</p><button className="google-signin-button" onClick={connectAccount}>Continue with Google</button><small></small></div></div>;
 
   const profile = dashboard?.user || dashboard?.profile || {};

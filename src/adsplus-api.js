@@ -36,11 +36,11 @@ export function clearAccessToken() {
   try { window.dispatchEvent(new Event('adsplus:logged-out')); } catch { /* event support may be unavailable */ }
 }
 
-export async function apiRequest(path, { method = 'GET', body, signal, accessToken, headers: extraHeaders = {} } = {}) {
+export async function apiRequest(path, { method = 'GET', body, signal, accessToken, headers: extraHeaders = {}, anonymous = false } = {}) {
   const { apiBaseUrl } = await readApiConfig();
   if (!apiBaseUrl) throw new Error('Ads+ account services are temporarily unavailable. Please try again later.');
   const headers = { Accept: 'application/json', ...extraHeaders };
-  const token = accessToken || getAccessToken();
+  const token = anonymous ? '' : (accessToken || getAccessToken());
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   let response;

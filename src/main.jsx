@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react';
 
 import { createRoot } from 'react-dom/client';
 import {
-  Activity, Moon, Sun, ArrowRight, ArrowUpRight, BadgePercent, Bell, CheckCircle2,
+  Activity, Moon, Sun, ArrowRight, ArrowUpRight, CheckCircle2,
   ChevronRight, CircleAlert, CircleHelp, Clock3, CreditCard, Eye,
-  Gift, Headphones, Home, LayoutDashboard, Link2, LockKeyhole, LogOut,
-  Menu, MessageCircle, PlayCircle, Plus, Settings2, ShieldCheck, Sparkles,
-  Wallet, X, Zap, UserRound, ChartNoAxesCombined, Mail, Globe2, Smartphone
+  Headphones, Home, LockKeyhole, LogOut,
+  Menu, MessageCircle, Plus, Settings2, ShieldCheck, Wallet, X, UserRound, ChartNoAxesCombined, Mail, Smartphone
 } from 'lucide-react';
 import './styles.css';
 import './update.css';
@@ -180,8 +179,8 @@ function App() {
       result = await apiRequest('/v1/payouts', {
         method: 'POST',
         body: { amount_paise: paise.toString(), upi_id: upiId.trim() },
-        headers: { 'Idempotency-Key': payoutIdempotencyKey },
-      });
+        headers: { 'Idempotency-Key': payoutIdempotencyKey }
+});
     } catch (error) {
       // Definitive 4xx rejection: rotate for the next corrected request.
       // Network/5xx errors remain ambiguous, so retain the key for retry.

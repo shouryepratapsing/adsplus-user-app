@@ -38,7 +38,6 @@
 .theme-dark .topbar { border-color:var(--border); background:rgba(19,18,17,.91); }
 .theme-dark .breadcrumb { color:#a59c91; }
 .theme-dark .breadcrumb strong { color:#f0eae3; }
-.theme-dark .notification-btn i { border-color:#151413; }
 .theme-dark .top-avatar { border-color:#54475e; background:#352c40; color:#eee2fc; }
 .theme-dark .page-content { color:var(--ink); }
 .theme-dark .page-heading h1, .theme-dark .section-title-row h2, .theme-dark .section-header h2, .theme-dark .payment-explainer h2, .theme-dark .account-safety h2, .theme-dark .section-card h2, .theme-dark .section-card h3, .theme-dark .summary-value, .theme-dark .daily-stat strong { color:#f2eee8; }

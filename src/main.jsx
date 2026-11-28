@@ -128,7 +128,7 @@ function App() {
       } catch (error) {
         if (!active) return;
         setDashboard(null);
-        setBackendState({ status: !getAccessToken() ? 'signed_out' : 'error', message: error?.message || 'We couldn't load your earnings. Please refresh and try again.' });
+        setBackendState({ status: !getAccessToken() ? 'signed_out' : 'error', message: error?.message || 'Could not load your earnings. Please refresh and try again.' });
       }
     })();
     return () => { active = false; };

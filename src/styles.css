@@ -62,8 +62,10 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .breadcrumb strong { color: #50483f; font-weight: 700; }
 .demo-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 27px; padding: 0 9px; border: 1px solid #e9dccf; border-radius: 9px; color: #876348; background: #f5ece4; font-size: 9px; font-weight: 800; letter-spacing: .7px; white-space: nowrap; }
 .demo-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b7824d; box-shadow: 0 0 0 3px rgba(183,130,77,.12); }
-.notification-btn { position: relative; }
-.notification-btn i { position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border: 1px solid #f7f5f1; border-radius: 50%; background: #bc8262; }
+.refresh-btn { position: relative; }
+.refresh-btn.is-refreshing svg { animation: adsplus-refresh-spin .85s linear infinite; }
+@keyframes adsplus-refresh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .refresh-btn.is-refreshing svg { animation: none; } }
 .top-avatar { width: 33px; height: 33px; border: 1px solid #dcd2e9; cursor: pointer; }
 .page-content { width: min(100%, 1440px); margin: 0 auto; padding: 31px clamp(20px, 4vw, 48px) 34px; }
 .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin: 5px 0 24px; }
@@ -376,7 +378,7 @@ h1, h2, h3, p { margin-top: 0; }
   .breadcrumb > span { display: none; }
   .breadcrumb > svg { display: none; }
   .demo-pill { min-height: 25px; padding: 0 7px; font-size: 8px; letter-spacing: .4px; }
-  .notification-btn { width: 32px; height: 32px; }
+  .refresh-btn { width: 32px; height: 32px; }
   .top-avatar { width: 30px; height: 30px; }
   .page-content { padding: 24px 15px 20px; }
   .page-heading { align-items: flex-start; flex-direction: column; gap: 12px; margin: 2px 0 19px; }

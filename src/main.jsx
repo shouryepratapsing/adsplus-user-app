@@ -14,7 +14,6 @@ import './dark-mode.css';
 import { apiRequest, clearAccessToken, formatDateTime, formatINRFromPaise, getAccessToken, setAccessToken, readApiConfig } from './adsplus-api.js';
 import { getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, googleProvider } from './firebase.js';
-import AdminPanel from './AdminPanel.jsx';
 
 // Public user app: any Google account may sign in. Admin API routes retain server-side UID authorization.
 const CANONICAL_HOST = 'app.adsplusprof.me';
@@ -31,7 +30,7 @@ const NAV = [
 ];
 
 function App() {
-  const [page, setPage] = useState(() => window.location.pathname.startsWith('/admin') ? 'admin' : 'home');
+  const [page, setPage] = useState('home');
   const [darkMode, setDarkMode] = useState(() => { try { return window.localStorage.getItem('adsplus.theme') === 'dark'; } catch { return false; } });
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState('');
@@ -47,7 +46,7 @@ function App() {
     window.setTimeout(() => setToast(''), 3600);
   };
   const navigate = (target) => {
-    window.history.pushState({}, '', target === 'admin' ? '/admin' : '/');
+    window.history.pushState({}, '', '/');
     setPage(target);
     setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -55,7 +54,7 @@ function App() {
   const refreshData = () => setRefreshKey((v) => v + 1);
 
   useEffect(() => {
-    const onPopState = () => setPage(window.location.pathname.startsWith('/admin') ? 'admin' : 'home');
+    const onPopState = () => setPage('home');
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
@@ -196,11 +195,11 @@ function App() {
     return result;
   };
 
-  if (authLoading) return <div className="owner-lock-screen"><div className="owner-lock-card"><LockKeyhole size={26}/><h1>Ads+ Private</h1><p>Checking owner access…</p></div></div>;
+  if (authLoading) return <div className="owner-lock-screen"><div className="owner-lock-card"><LockKeyhole size={26}/><h1>Ads+</h1><p>Checking your Google sign-in…</p></div></div>;
   if (!authUser) return <div className="owner-lock-screen"><div className="owner-lock-card"><img src="/logo-black.png" alt="Ads+"/><h1>Welcome to Ads+</h1><p>Sign in with Google to access your Ads+ account.</p><button className="google-signin-button" onClick={connectAccount}>Continue with Google</button><small>New users can create an account with Google.</small></div></div>;
 
   const profile = dashboard?.user || dashboard?.profile || {};
-  const navItems = authUser ? [...NAV, { id: 'admin', label: 'Admin panel', icon: ShieldCheck }] : NAV;
+  const navItems = NAV;
   const statusLabel = ({ checking: 'CHECKING', not_configured: 'BACKEND NEEDED', signed_out: 'SIGN IN REQUIRED', connected: 'LIVE ACCOUNT', error: 'CONNECTION ERROR' })[backendState.status] || 'ACCOUNT STATUS';
   return <div className={`app-shell ${darkMode ? 'theme-dark' : 'theme-light'}`}>
     <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -226,7 +225,6 @@ function App() {
         {page === 'wallet' && <WalletPage notify={notify} dashboard={dashboard} backendState={backendState} onWithdraw={requestWithdrawal} />}
         {page === 'profile' && <ProfilePage navigate={navigate} notify={notify} dashboard={dashboard} backendState={backendState} authUser={authUser} authLoading={authLoading} onConnect={connectAccount} onSignOut={signOut} />}
         {page === 'help' && <HelpPage notify={notify} />}
-        {page === 'admin' && <AdminPanel authUser={authUser} />}
       </main>
       <footer className="page-footer"><span>© 2026 Ads+</span><span className="footer-dot">·</span><button onClick={() => navigate('help')}>Help centre</button><span className="footer-spacer" /><span className="footer-lock"><LockKeyhole size={12} /> {backendState.status === 'connected' ? 'Live account connected' : 'Live account not connected'}</span></footer>
     </div>
@@ -235,7 +233,7 @@ function App() {
   </div>;
 }
 
-function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', profile: 'Profile', help: 'Help centre', admin: 'Admin panel' })[page] || 'Overview'; }
+function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', profile: 'Profile', help: 'Help centre' })[page] || 'Overview'; }
 function PageHeading({ eyebrow, title, subtitle, action }) { return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action && <div className="heading-action">{action}</div>}</div>; }
 function SetupNotice({ title = 'Connect your Ads+ account', children, action }) { return <section className="notice-strip"><span className="notice-icon"><ShieldCheck size={19} /></span><div><strong>{title}</strong><p>{children}</p>{action && <div className="setup-action">{action}</div>}</div></section>; }
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { createRoot } from 'react-dom/client';
 import {
-  Activity, Moon, Sun, ArrowRight, ArrowUpRight, CheckCircle2,
+  Activity, Moon, Sun, RefreshCw, ArrowRight, ArrowUpRight, CheckCircle2,
   ChevronRight, CircleAlert, CircleHelp, Clock3, CreditCard, Eye, EyeOff,
   Headphones, Home, LockKeyhole, LogOut,
   Menu, MessageCircle, Plus, Settings2, ShieldCheck, Wallet, X, UserRound, ChartNoAxesCombined, Mail
@@ -218,7 +218,7 @@ function App() {
     </aside>
     {menuOpen && <button className="scrim" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
     <div className="main-column">
-      <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-quiet" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'}>{menuOpen ? <X size={21} /> : <Menu size={21} />}</button><div className="breadcrumb"><strong>{pageLabel(page)}</strong></div></div><div className="topbar-actions"><button type="button" className={`theme-toggle ${darkMode ? 'is-dark' : 'is-light'}`} role="switch" aria-checked={darkMode} aria-label={darkMode ? 'Turn dark mode off' : 'Turn dark mode on'} title={darkMode ? 'Dark mode: on' : 'Dark mode: off'} onClick={() => setDarkMode((value) => !value)}><span className="theme-toggle-icon">{darkMode ? <Sun size={17} /> : <Moon size={17} />}</span><span className="theme-toggle-label">Dark mode</span><span className="theme-switch-track"><span className="theme-switch-thumb" /></span></button><button className="notification-btn icon-quiet" aria-label="Refresh account information" onClick={refreshData}><Activity size={18} /></button><button className="top-avatar" onClick={() => navigate('profile')} aria-label="Your profile">{String(profile.display_name || profile.name || 'A').slice(0,1).toUpperCase()}</button></div></header>
+      <header className="topbar"><div className="topbar-left"><button className="mobile-menu icon-quiet" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'}>{menuOpen ? <X size={21} /> : <Menu size={21} />}</button><div className="breadcrumb"><strong>{pageLabel(page)}</strong></div></div><div className="topbar-actions"><button type="button" className={`theme-toggle ${darkMode ? 'is-dark' : 'is-light'}`} role="switch" aria-checked={darkMode} aria-label={darkMode ? 'Turn dark mode off' : 'Turn dark mode on'} title={darkMode ? 'Dark mode: on' : 'Dark mode: off'} onClick={() => setDarkMode((value) => !value)}><span className="theme-toggle-icon">{darkMode ? <Sun size={17} /> : <Moon size={17} />}</span><span className="theme-toggle-label">Dark mode</span><span className="theme-switch-track"><span className="theme-switch-thumb" /></span></button><button type="button" className={`refresh-btn icon-quiet ${backendState.status === 'checking' ? 'is-refreshing' : ''}`} aria-label="Refresh account information" title="Refresh account information" onClick={refreshData}><RefreshCw size={18} /></button><button className="top-avatar" onClick={() => navigate('profile')} aria-label="Your profile">{String(profile.display_name || profile.name || 'A').slice(0,1).toUpperCase()}</button></div></header>
       <main className="page-content">
         {page === 'home' && <HomePage navigate={navigate} dashboard={dashboard} backendState={backendState} showBalances={showBalances} setShowBalances={setShowBalances} />}
         {page === 'earnings' && <EarningsPage navigate={navigate} dashboard={dashboard} backendState={backendState} />}

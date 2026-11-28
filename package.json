@@ -18,6 +18,11 @@
     "lucide-react": "^0.468.0",
     "react": "latest",
     "react-dom": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3"
   }
 }

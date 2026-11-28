@@ -161,3 +161,45 @@ button:disabled, input:disabled { cursor: not-allowed; opacity: .6; }
 .wallet-balance-eye:hover { background: rgba(255,255,255,.2); }
 .balance-visibility-toggle:active { transform: scale(.94); }
 .hero-eye { cursor: pointer; }
+
+
+/* Profile page: use the shared Ads+ brown/lavender accent palette */
+.theme-light .profile-hero {
+  border-color: rgba(111, 78, 55, .16);
+  background: linear-gradient(118deg, #ece5f2 0%, #e8e1ef 55%, #f0e9f2 100%);
+}
+.theme-light .profile-chips > span {
+  border-color: rgba(111, 78, 55, .12);
+  color: #6f4e37;
+  background: rgba(255, 255, 255, .58);
+}
+.theme-light .connection-row,
+.theme-light .preference-row {
+  border-color: var(--border);
+}
+.theme-light .connection-icon {
+  color: var(--lavender-ink);
+  background: var(--lavender);
+}
+.theme-light .connection-status {
+  color: var(--brown);
+  background: var(--brown-soft);
+}
+.theme-light .account-safety {
+  border-color: rgba(111, 78, 55, .13);
+  background: #eee8f3;
+  box-shadow: none;
+}
+.theme-light .safety-icon {
+  color: var(--lavender-ink);
+  background: #ded5eb;
+}
+.theme-light .google-signin-button {
+  border-color: #d9cee8;
+  color: var(--brown);
+  background: var(--lavender);
+}
+.theme-light .google-signin-button:hover {
+  border-color: #b8a6cf;
+  background: #ddd4eb;
+}

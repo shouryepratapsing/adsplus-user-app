@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Activity, Moon, Sun, RefreshCw, ArrowRight, ArrowUpRight, CheckCircle2,
-  ChevronRight, CircleAlert, CircleHelp, Clock3, CreditCard, Eye, EyeOff,
+  ChevronRight, CircleAlert, CircleHelp, Clock3, CreditCard, Copy, Eye, EyeOff,
   Headphones, Home, LockKeyhole, LogOut,
   Menu, MessageCircle, Plus, Settings2, ShieldCheck, Wallet, X, UserRound, ChartNoAxesCombined, Mail
 } from 'lucide-react';
@@ -25,6 +25,7 @@ const NAV = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'earnings', label: 'Earnings', icon: ChartNoAxesCombined },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
+  { id: 'feedback', label: 'Feedback', icon: MessageCircle },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ];
 
@@ -322,6 +323,7 @@ function App() {
         {page === 'earnings' && <EarningsPage navigate={navigate} dashboard={dashboard} backendState={backendState} />}
         {page === 'wallet' && <WalletPage notify={notify} dashboard={dashboard} backendState={backendState} onWithdraw={requestWithdrawal} showBalances={showBalances} setShowBalances={setShowBalances} />}
         {page === 'profile' && <ProfilePage navigate={navigate} notify={notify} dashboard={dashboard} backendState={backendState} authUser={authUser} authLoading={authLoading} onConnect={connectAccount} onSignOut={signOut} />}
+        {page === 'feedback' && <FeedbackPage notify={notify} />}
         {page === 'help' && <HelpPage notify={notify} />}
       </main>
       
@@ -331,7 +333,7 @@ function App() {
   </div>;
 }
 
-function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', profile: 'Profile', help: 'Help centre' })[page] || 'Overview'; }
+function pageLabel(page) { return ({ home: 'Overview', earnings: 'Earnings', wallet: 'Wallet', feedback: 'Feedback', profile: 'Profile', help: 'Help centre' })[page] || 'Overview'; }
 function PageHeading({ title, subtitle, action }) { return <div className="page-heading"><div><h1>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>{action && <div className="heading-action">{action}</div>}</div>; }
 function SweetEmptyBox({ icon: Icon = Activity, title }) {
   return <div className="sweet-empty-box" role="status">
@@ -423,6 +425,137 @@ function ProfilePage({ navigate, notify, dashboard, backendState, authUser, auth
 }
 
 function ConnectionRow({ icon: Icon, title, detail, status }) { return <div className="connection-row"><span className="connection-icon"><Icon size={17} /></span><div className="connection-copy"><strong>{title}</strong><small>{detail}</small></div><span className="connection-status"><span />{status}</span></div>; }
+
+
+function FeedbackPage({ notify }) {
+  const [topic, setTopic] = useState('Idea');
+  const [rating, setRating] = useState(5);
+  const [message, setMessage] = useState('');
+  const [savedDraft, setSavedDraft] = useState(() => {
+    try {
+      const drafts = JSON.parse(window.localStorage.getItem('adsplus.feedback.drafts.v1') || '[]');
+      return Array.isArray(drafts) && drafts.length ? drafts[0] : null;
+    } catch { return null; }
+  });
+
+  const saveDraft = (event) => {
+    event.preventDefault();
+    const cleanMessage = message.trim();
+    if (cleanMessage.length < 10) {
+      notify('Please add at least 10 characters so your feedback has context.');
+      return;
+    }
+
+    const entry = {
+      topic,
+      rating,
+      message: cleanMessage,
+      created_at: new Date().toISOString()
+    };
+
+    try {
+      const existing = JSON.parse(window.localStorage.getItem('adsplus.feedback.drafts.v1') || '[]');
+      const previous = Array.isArray(existing) ? existing : [];
+      window.localStorage.setItem('adsplus.feedback.drafts.v1', JSON.stringify([entry, ...previous].slice(0, 10)));
+      setSavedDraft(entry);
+      setMessage('');
+      notify('Feedback draft saved on this browser.');
+    } catch {
+      notify('This browser could not save your feedback draft.');
+    }
+  };
+
+  const copySavedDraft = async () => {
+    if (!savedDraft) return;
+    const content = [
+      'Ads+ feedback',
+      'Topic: ' + savedDraft.topic,
+      'Rating: ' + savedDraft.rating + '/5',
+      '',
+      savedDraft.message
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(content);
+      notify('Feedback draft copied to clipboard.');
+    } catch {
+      notify('Clipboard access is unavailable in this browser.');
+    }
+  };
+
+  const clearSavedDraft = () => {
+    try {
+      const existing = JSON.parse(window.localStorage.getItem('adsplus.feedback.drafts.v1') || '[]');
+      const next = Array.isArray(existing) ? existing.slice(1) : [];
+      window.localStorage.setItem('adsplus.feedback.drafts.v1', JSON.stringify(next));
+      setSavedDraft(next[0] || null);
+      notify('Saved draft removed from this browser.');
+    } catch {
+      notify('Could not remove the saved draft.');
+    }
+  };
+
+  return <>
+    <PageHeading title="Feedback" subtitle="Share an idea, report an issue or tell us how Ads+ feels to use." />
+    <section className="feedback-intro">
+      <span className="feedback-intro-icon"><MessageCircle size={21} /></span>
+      <div>
+        <span className="feedback-eyebrow">YOUR VOICE MATTERS</span>
+        <h2>Help shape what Ads+ becomes.</h2>
+        <p>Useful feedback helps us make the extension and your account experience better.</p>
+      </div>
+    </section>
+
+    <form className="feedback-workspace" onSubmit={saveDraft}>
+      <div className="feedback-field">
+        <label className="feedback-field-label">What would you like to share?</label>
+        <div className="feedback-topic-list">
+          {['Idea', 'Bug', 'Experience', 'Earnings', 'Other'].map((item) => (
+            <button key={item} type="button" className={topic === item ? 'feedback-topic selected' : 'feedback-topic'}
+              aria-pressed={topic === item} onClick={() => setTopic(item)}>{item}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="feedback-field">
+        <label className="feedback-field-label">How was your experience?</label>
+        <div className="feedback-rating" role="group" aria-label="Rate your experience">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <button key={value} type="button" className={rating === value ? 'feedback-rating-choice selected' : 'feedback-rating-choice'}
+              aria-pressed={rating === value} onClick={() => setRating(value)}>{value}</button>
+          ))}
+          <span>{rating === 5 ? 'Excellent' : rating === 4 ? 'Good' : rating === 3 ? 'Okay' : rating === 2 ? 'Could be better' : 'Poor'}</span>
+        </div>
+      </div>
+
+      <div className="feedback-field">
+        <label className="feedback-field-label" htmlFor="adsplus-feedback-message">Your message</label>
+        <textarea id="adsplus-feedback-message" className="feedback-message-input" value={message}
+          onChange={(event) => setMessage(event.target.value)} minLength={10} maxLength={1200}
+          placeholder="Tell us what happened or what you would like to see next…" required />
+        <div className="feedback-message-meta"><span>At least 10 characters</span><span>{message.length}/1200</span></div>
+      </div>
+
+      <div className="feedback-submit-line">
+        <button type="submit" className="primary-button" disabled={message.trim().length < 10}>Save feedback draft <ArrowRight size={15} /></button>
+        <p>Your draft is stored on this browser only. It is not sent to Ads+ yet.</p>
+      </div>
+    </form>
+
+    {savedDraft && <section className="feedback-saved-draft">
+      <div className="feedback-saved-copy">
+        <span className="feedback-eyebrow">SAVED ON THIS DEVICE</span>
+        <strong>Latest feedback draft</strong>
+        <p>{savedDraft.topic} · {savedDraft.rating}/5 · {formatDateTime(savedDraft.created_at)}</p>
+        <blockquote>{savedDraft.message}</blockquote>
+      </div>
+      <div className="feedback-saved-actions">
+        <button type="button" className="secondary-button" onClick={copySavedDraft}><Copy size={14} /> Copy</button>
+        <button type="button" className="text-link" onClick={clearSavedDraft}>Remove</button>
+      </div>
+    </section>}
+    <p className="feedback-privacy-note"><ShieldCheck size={14} /> Please do not include passwords, UPI PINs or bank details in your feedback.</p>
+  </>;
+}
 
 function HelpPage({ notify }) { const [openFaq, setOpenFaq] = useState(0); const faqs = [
   ['Are earnings active?', 'Your earnings appear after an ad view has been verified by Ads+.'],

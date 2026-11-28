@@ -85,3 +85,51 @@ button:disabled, input:disabled { cursor: not-allowed; opacity: .6; }
   letter-spacing: .12px;
   line-height: 1.35;
 }
+
+
+/* Responsive, shared spacing system for page cards */
+:root {
+  --app-card-gap: clamp(16px, 1.7vw, 20px);
+  --app-grid-gap: clamp(12px, 1.35vw, 16px);
+}
+.page-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-card-gap);
+}
+.page-content > * {
+  min-width: 0;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+.page-content > .secondary-button {
+  align-self: flex-start;
+}
+.earnings-summary-grid,
+.wallet-page-grid,
+.profile-grid,
+.hero-grid,
+.two-column-section,
+.mode-grid,
+.coupon-benefits,
+.support-info-grid {
+  gap: var(--app-grid-gap);
+}
+.earnings-summary-grid { margin-bottom: 0; }
+.earnings-chart-card { margin-bottom: 0; }
+.profile-grid { margin-top: 0; }
+.payment-explainer,
+.account-safety { margin-top: 0; }
+
+@media (max-width: 640px) {
+  :root {
+    --app-card-gap: clamp(12px, 3vw, 15px);
+    --app-grid-gap: clamp(10px, 2.5vw, 13px);
+  }
+}
+@media (max-width: 360px) {
+  :root {
+    --app-card-gap: 12px;
+    --app-grid-gap: 10px;
+  }
+}

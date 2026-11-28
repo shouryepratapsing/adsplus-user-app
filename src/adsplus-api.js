@@ -54,7 +54,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, accessTok
       credentials: 'omit',
     });
   } catch {
-    throw new Error('Couldn't connect to Ads+. Check your internet connection and try again.');
+    throw new Error('Could not connect to Ads+. Check your internet connection and try again.');
   }
   const raw = await response.text();
   let payload = {};

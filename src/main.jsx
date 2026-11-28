@@ -61,6 +61,7 @@ function App() {
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [extensionConnect, setExtensionConnect] = useState(() => readExtensionConnectRequest() || { mode: false, status: 'idle' });
+  const [extensionConnectRetry, setExtensionConnectRetry] = useState(0);
 
   const notify = (message) => {
     setToast(message);
@@ -129,11 +130,11 @@ function App() {
     return () => { active = false; };
   }, [
     extensionConnect.mode,
-    extensionConnect.status,
     extensionConnect.device_id,
     extensionConnect.install_secret,
     authUser,
-    authLoading
+    authLoading,
+    extensionConnectRetry
   ]);
 
   useEffect(() => {
@@ -287,7 +288,7 @@ function App() {
       ) : !authUser ? (
         <button className="google-signin-button" onClick={connectAccount}>Continue with Google</button>
       ) : extensionConnect.status === 'error' && extensionConnect.install_secret ? (
-        <button className="google-signin-button" onClick={() => setExtensionConnect((current) => ({ ...current, status: 'pending', message: '' }))}>Try again</button>
+        <button className="google-signin-button" onClick={() => { setExtensionConnectRetry((value) => value + 1); setExtensionConnect((current) => ({ ...current, status: 'pending', message: '' })); }}>Try again</button>
       ) : null}
       <button className="extension-connect-cancel" onClick={() => setExtensionConnect({ mode: false, status: 'idle' })}>Cancel</button>
     </div></div>;

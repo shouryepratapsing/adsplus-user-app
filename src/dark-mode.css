@@ -38,7 +38,6 @@
 .theme-dark .topbar { border-color:var(--border); background:rgba(19,18,17,.91); }
 .theme-dark .breadcrumb { color:#a59c91; }
 .theme-dark .breadcrumb strong { color:#f0eae3; }
-.theme-dark .notification-btn i { border-color:#151413; }
 .theme-dark .top-avatar { border-color:#54475e; background:#352c40; color:#eee2fc; }
 .theme-dark .page-content { color:var(--ink); }
 .theme-dark .page-heading h1, .theme-dark .section-title-row h2, .theme-dark .section-header h2, .theme-dark .payment-explainer h2, .theme-dark .account-safety h2, .theme-dark .section-card h2, .theme-dark .section-card h3, .theme-dark .summary-value, .theme-dark .daily-stat strong { color:#f2eee8; }
@@ -135,3 +134,19 @@ html[data-adsplus-theme="dark"], html[data-adsplus-theme="dark"] body { backgrou
 html[data-adsplus-theme="dark"] .ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-light { display:none; }
 html[data-adsplus-theme="dark"] .ads-auth-brand .ads-auth-mark.ads-auth-custom-mark img.ads-auth-logo-dark { display:block; }
 html[data-adsplus-theme="dark"] .ads-auth-custom-mark .ads-auth-logo-fallback { color:#fff; }
+
+
+.theme-dark .sweet-empty-box {
+  border-color: var(--border);
+  color: #e8d9ca;
+  background: linear-gradient(135deg, #26211d 0%, #211f26 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+.theme-dark .sweet-empty-icon {
+  border-color: #514236;
+  color: #e2c3a8;
+  background: linear-gradient(145deg, #3a2e25, #302a37);
+}
+.theme-dark .sweet-empty-box strong {
+  color: #f2e7dc;
+}
